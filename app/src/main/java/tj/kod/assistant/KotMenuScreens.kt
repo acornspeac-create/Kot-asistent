@@ -649,6 +649,40 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
             }
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "Максимальный интеллект",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    "Qwen3 4B Instruct INT4 • около 2.66 ГБ • умнее, но требует больше памяти и работает медленнее.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    viewModel.maxLocalModelStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = viewModel::downloadMaxTextModel,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Скачать MAX ИИ")
+                }
+                Button(
+                    onClick = viewModel::checkMaxTextModelDownload,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Проверить MAX загрузку")
+                }
+            }
+        }
+
         Button(
             onClick = { viewModel.discoverLocalTextModels() },
             modifier = Modifier.fillMaxWidth(),
