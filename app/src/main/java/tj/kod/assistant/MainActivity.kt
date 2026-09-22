@@ -79,6 +79,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                                 onRequestRuntimeAccess = ::requestMaximumRuntimeAccess,
                                 onAllFiles = { AccessController.openAllFilesAccess(this) },
                                 onOverlay = { AccessController.openOverlayAccess(this) },
+                                onInstallPackagesAccess = {
+                                    AccessController.openInstallUnknownApps(this)
+                                },
                                 onNotificationAccess = {
                                     AccessController.openNotificationListenerSettings(this)
                                 },
@@ -380,6 +383,7 @@ private fun AccessScreen(
     onRequestRuntimeAccess: () -> Unit,
     onAllFiles: () -> Unit,
     onOverlay: () -> Unit,
+    onInstallPackagesAccess: () -> Unit,
     onNotificationAccess: () -> Unit,
     onAccessibility: () -> Unit,
     onDeviceAdmin: () -> Unit,
@@ -430,6 +434,15 @@ private fun AccessScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Работа поверх других приложений")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onInstallPackagesAccess,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Разрешить установку APK")
             }
         }
 
