@@ -46,6 +46,18 @@ class MemoryStore(context: Context) {
             .takeLast(limit)
             .joinToString("\n") { item -> item.role + ": " + item.text }
 
+    fun exportJson(): JSONArray {
+        val array = JSONArray()
+        load().forEach { item ->
+            array.put(
+                JSONObject()
+                    .put("role", item.role)
+                    .put("text", item.text)
+            )
+        }
+        return array
+    }
+
     fun clear() {
         prefs.edit().remove(KEY_MESSAGES).apply()
     }
