@@ -18,6 +18,7 @@ class AssistantViewModel(
     private val api = AssistantApi()
     private val flasherApi = FlasherApi()
     private val offlineAssistant = OfflineAssistant()
+    private val ownerActions = OwnerActionExecutor(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
@@ -237,6 +238,15 @@ class AssistantViewModel(
         val userMessage = Message("user", clean)
         messages += userMessage
         memory.append(userMessage)
+
+        ownerActions.tryExecute(clean)?.let { directReply ->
+            val assistantMessage = Message("assistant", directReply)
+            messages += assistantMessage
+            memory.append(assistantMessage)
+            status = "Готов"
+            onReply(directReply)
+            return
+        }
 
         viewModelScope.launch {
             busy = true
