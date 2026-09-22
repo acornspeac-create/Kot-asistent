@@ -251,11 +251,38 @@ fun KotTaskScreen(
             "automations" -> {
                 item {
                     Text(
-                        "Здесь будут регулярные и событийные сценарии. Уже можно давать KOT команды на действия; расписания подключаются к системному планировщику отдельным модулем.",
+                        "Ежедневный сценарий запускается системным WorkManager даже после закрытия KOT.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                item { CommandBox(viewModel, onSpeak, "Опиши сценарий") }
+                item {
+                    OutlinedTextField(
+                        value = viewModel.automationText,
+                        onValueChange = { viewModel.automationText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Что напоминать каждый день") },
+                        minLines = 3,
+                    )
+                }
+                item {
+                    Button(
+                        onClick = viewModel::saveDailyAutomation,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Включить ежедневный сценарий")
+                    }
+                }
+                item {
+                    Button(
+                        onClick = viewModel::disableDailyAutomation,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Выключить ежедневный сценарий")
+                    }
+                }
+                if (viewModel.automationStatus.isNotBlank()) {
+                    item { Text(viewModel.automationStatus) }
+                }
             }
 
             "autopilot" -> {
