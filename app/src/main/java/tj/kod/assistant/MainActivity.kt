@@ -73,11 +73,19 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AssistantScreen(
-                        viewModel = viewModel,
-                        onListen = ::requestVoice,
-                        onSpeak = ::speak,
-                    )
+                    if (viewModel.showFlasher) {
+                        FlasherScreen(
+                            viewModel = viewModel,
+                            onBack = { viewModel.showFlasher = false },
+                        )
+                    } else {
+                        AssistantScreen(
+                            viewModel = viewModel,
+                            onListen = ::requestVoice,
+                            onSpeak = ::speak,
+                            onOpenFlasher = { viewModel.showFlasher = true },
+                        )
+                    }
                 }
             }
         }
@@ -207,6 +215,7 @@ private fun AssistantScreen(
     viewModel: AssistantViewModel,
     onListen: () -> Unit,
     onSpeak: (String) -> Unit,
+    onOpenFlasher: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -251,10 +260,18 @@ private fun AssistantScreen(
             Text("Сохранить AI-сервер")
         }
 
+        Button(
+            onClick = onOpenFlasher,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.busy,
+        ) {
+            Text("Прошивка Android")
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.52f),
+                .fillMaxHeight(0.42f),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(viewModel.messages) { message ->
@@ -319,6 +336,168 @@ private fun AssistantScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Очистить локальную память")
+        }
+    }
+}
+
+@Composable
+private fun FlasherScreen(
+    viewModel: AssistantViewModel,
+    onBack: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "KOT Flasher",
+            style = MaterialTheme.typography.headlineMedium,
+        )
+
+        Text(
+            text = "Прошивка выполняется на компьютере через локальный KOT Flasher Agent. Не отключай USB во время записи.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        Text(
+            text = viewModel.flasherStatus,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        OutlinedTextField(
+            value = viewModel.flasherUrl,
+            onValueChange = { viewModel.flasherUrl = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Адрес Flasher Agent, например http://192.168.1.10:8791") },
+            singleLine = true,
+            enabled = !viewModel.flasherBusy,
+        )
+
+        OutlinedTextField(
+            value = viewModel.flasherToken,
+            onValueChange = { viewModel.flasherToken = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Токен Flasher Agent") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            enabled = !viewModel.flasherBusy,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = viewModel::saveFlasherConfig,
+                modifier = Modifier.weight(1f),
+                enabled = !viewModel.flasherBusy,
+            ) {
+                Text("Сохранить")
+            }
+
+            Button(
+                onClick = viewModel::refreshFlasherDevices,
+                modifier = Modifier.weight(1f),
+                enabled = !viewModel.flasherBusy,
+            ) {
+                Text("Найти телефоны")
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.30f),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(viewModel.flasherDevices) { device ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = device.model.ifBlank {
+                                device.product.ifBlank { "Android-устройство" }
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text("Serial: " + device.serial)
+                        Text("Режим: " + device.transport + " / " + device.state)
+                        if (device.product.isNotBlank()) {
+                            Text("Product: " + device.product)
+                        }
+                        Button(
+                            onClick = { viewModel.selectFlasherDevice(device.serial) },
+                            modifier = Modifier.padding(top = 8.dp),
+                            enabled = !viewModel.flasherBusy,
+                        ) {
+                            Text(
+                                if (viewModel.selectedFlasherSerial == device.serial) {
+                                    "Выбрано"
+                                } else {
+                                    "Выбрать"
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = viewModel.flasherManifestPath,
+            onValueChange = { viewModel.flasherManifestPath = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Путь к manifest JSON на компьютере") },
+            singleLine = true,
+            enabled = !viewModel.flasherBusy,
+        )
+
+        Button(
+            onClick = viewModel::checkFlashPlan,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.flasherBusy &&
+                viewModel.selectedFlasherSerial.isNotBlank(),
+        ) {
+            Text("Проверить прошивку без записи")
+        }
+
+        OutlinedTextField(
+            value = viewModel.flasherConfirmation,
+            onValueChange = { viewModel.flasherConfirmation = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = {
+                val serial = viewModel.selectedFlasherSerial
+                Text(
+                    if (serial.isBlank()) {
+                        "Сначала выбери телефон"
+                    } else {
+                        "Для запуска введи: FLASH " + serial
+                    }
+                )
+            },
+            singleLine = true,
+            enabled = !viewModel.flasherBusy &&
+                viewModel.selectedFlasherSerial.isNotBlank(),
+        )
+
+        Button(
+            onClick = viewModel::executeFlash,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.flasherBusy &&
+                viewModel.selectedFlasherSerial.isNotBlank() &&
+                viewModel.flasherConfirmation ==
+                    "FLASH " + viewModel.selectedFlasherSerial,
+        ) {
+            Text("НАЧАТЬ ПРОШИВКУ")
+        }
+
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.flasherBusy,
+        ) {
+            Text("Назад")
         }
     }
 }
