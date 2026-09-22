@@ -21,7 +21,7 @@ class AssistantViewModel(
     private val offlineAssistant = OfflineAssistant()
     private val ownerActions = OwnerActionExecutor(context)
     private val profilesStore = ProfileStore(context)
-    private val backupManager = BackupManager(context, settings, profilesStore)
+    private val backupManager = BackupManager(context, settings, profilesStore, memory)
     private val vaultStore = VaultStore(context)
     private val automationStore = AutomationStore(context)
 
