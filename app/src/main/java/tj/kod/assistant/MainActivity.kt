@@ -10,6 +10,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -129,14 +130,64 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = textToSpeech?.setLanguage(Locale("ru", "RU"))
-            if (
-                result == TextToSpeech.LANG_MISSING_DATA ||
-                result == TextToSpeech.LANG_NOT_SUPPORTED
-            ) {
-                textToSpeech?.language = Locale.getDefault()
-            }
+            applyTtsStyle()
+
+            textToSpeech?.setOnUtteranceProgressListener(
+                object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+
+                    override fun onError(utteranceId: String?) = Unit
+
+                    override fun onDone(utteranceId: String?) {
+                        if (viewModel.continuousVoice) {
+                            runOnUiThread {
+                                if (AccessController.hasMicrophone(this@MainActivity)) {
+                                    window.decorView.postDelayed(
+                                        { startListening() },
+                                        350L,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            )
         }
+    }
+
+    private fun applyTtsStyle() {
+        val accent = viewModel.accent.lowercase(Locale.getDefault())
+
+        val preferredLocale = when {
+            "узбек" in accent -> Locale("uz", "UZ")
+            "таджик" in accent -> Locale("tg", "TJ")
+            "турец" in accent -> Locale("tr", "TR")
+            "англ" in accent || "english" in accent -> Locale.US
+            "чечен" in accent -> Locale("ce", "RU")
+            else -> Locale("ru", "RU")
+        }
+
+        val result = textToSpeech?.setLanguage(preferredLocale)
+        if (
+            result == TextToSpeech.LANG_MISSING_DATA ||
+            result == TextToSpeech.LANG_NOT_SUPPORTED
+        ) {
+            textToSpeech?.setLanguage(Locale("ru", "RU"))
+        }
+
+        val basePitch = when (viewModel.personaMode) {
+            PersonaMode.FUNNY_GIRLFRIEND -> 1.12f
+            PersonaMode.ADULT_COMPANION -> 1.06f
+            PersonaMode.FUNNY_FRIEND -> 0.94f
+            else -> 1.0f
+        }
+
+        val humorBoost = (viewModel.humorLevel.coerceIn(0, 3) * 0.03f)
+        textToSpeech?.setPitch((basePitch + humorBoost).coerceIn(0.75f, 1.35f))
+        textToSpeech?.setSpeechRate(
+            (1.0f + viewModel.humorLevel.coerceIn(0, 3) * 0.04f)
+                .coerceIn(0.85f, 1.25f)
+        )
     }
 
     private fun requestMaximumRuntimeAccess() {
@@ -215,10 +266,49 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                         ?.firstOrNull()
                         .orEmpty()
 
-                    if (recognizedText.isNotBlank()) {
-                        viewModel.submit(recognizedText, ::speak)
-                    } else {
+                    if (recognizedText.isBlank()) {
                         viewModel.status = "Не удалось распознать речь"
+                        return
+                    }
+
+                    if (viewModel.continuousVoice) {
+                        val wake = viewModel.wakeWord
+                            .trim()
+                            .lowercase(Locale.getDefault())
+
+                        val lower = recognizedText
+                            .trim()
+                            .lowercase(Locale.getDefault())
+
+                        if (wake.isNotBlank() && !lower.startsWith(wake)) {
+                            viewModel.status = "Жду слово «" + viewModel.wakeWord + "»"
+                            window.decorView.postDelayed(
+                                { startListening() },
+                                300L,
+                            )
+                            return
+                        }
+
+                        val command = if (wake.isBlank()) {
+                            recognizedText.trim()
+                        } else {
+                            recognizedText
+                                .trim()
+                                .drop(viewModel.wakeWord.trim().length)
+                                .trimStart(' ', ',', ':', '-', '—')
+                        }
+
+                        if (command.isBlank()) {
+                            viewModel.status = "Слушаю команду…"
+                            window.decorView.postDelayed(
+                                { startListening() },
+                                300L,
+                            )
+                        } else {
+                            viewModel.submit(command, ::speak)
+                        }
+                    } else {
+                        viewModel.submit(recognizedText, ::speak)
                     }
                 }
 
@@ -242,6 +332,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             )
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(
+                RecognizerIntent.EXTRA_PREFER_OFFLINE,
+                viewModel.selectedTaskMode == ConnectionMode.OFFLINE,
+            )
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Говори")
         }
 
@@ -250,6 +344,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private fun speak(text: String) {
         if (text.isBlank()) return
+
+        applyTtsStyle()
 
         textToSpeech?.speak(
             text,
