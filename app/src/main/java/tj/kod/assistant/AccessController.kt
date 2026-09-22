@@ -2,6 +2,8 @@ package tj.kod.assistant
 
 import android.Manifest
 import android.app.Activity
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -104,6 +106,21 @@ object AccessController {
         activity.startActivity(
             Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
         )
+    }
+
+    fun openDeviceAdmin(activity: Activity) {
+        val admin = ComponentName(
+            activity,
+            KotDeviceAdminReceiver::class.java,
+        )
+        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+            putExtra(
+                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "KOT Assistant: расширенный доступ для автоматизации устройства.",
+            )
+        }
+        activity.startActivity(intent)
     }
 
     fun openAppSettings(activity: Activity) {
