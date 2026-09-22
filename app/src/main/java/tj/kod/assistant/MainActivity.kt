@@ -574,6 +574,15 @@ private fun FlasherScreen(
                         if (device.product.isNotBlank()) {
                             Text("Product: " + device.product)
                         }
+                        if (device.vendor.isNotBlank()) {
+                            Text("Марка: " + device.vendor)
+                        }
+                        if (device.driver.isNotBlank()) {
+                            Text("Драйвер: " + device.driver)
+                        }
+                        if (device.flashMode.isNotBlank()) {
+                            Text("Режим прошивки: " + device.flashMode)
+                        }
                         Button(
                             onClick = { viewModel.selectFlasherDevice(device.serial) },
                             modifier = Modifier.padding(top = 8.dp),
@@ -590,6 +599,15 @@ private fun FlasherScreen(
                     }
                 }
             }
+        }
+
+        Button(
+            onClick = viewModel::prepareFlashMode,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.flasherBusy &&
+                viewModel.selectedFlasherSerial.isNotBlank(),
+        ) {
+            Text("Автоматически перейти в режим прошивки")
         }
 
         OutlinedTextField(
