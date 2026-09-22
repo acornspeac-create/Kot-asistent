@@ -58,6 +58,9 @@ class AssistantViewModel(
         profiles.addAll(profilesStore.profiles())
     }
 
+    fun taskModeLabel(taskId: String): String =
+        settings.taskMode(taskId).label
+
     fun openTask(taskId: String) {
         selectedTaskId = taskId
         selectedTaskMode = settings.taskMode(taskId)
