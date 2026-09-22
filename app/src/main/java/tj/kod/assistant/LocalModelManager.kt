@@ -42,7 +42,7 @@ class LocalModelManager(
             Uri.parse(RECOMMENDED_MODEL_URL)
         )
             .setTitle("KOT Offline AI")
-            .setDescription("Qwen3 0.6B INT4 • локальная модель")
+            .setDescription("Qwen3 1.7B INT4 • умная локальная модель")
             .setMimeType("application/octet-stream")
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(false)
@@ -180,14 +180,14 @@ class LocalModelManager(
 
     companion object {
         const val RECOMMENDED_FILE_NAME =
-            "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm"
+            "Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm"
 
         const val RECOMMENDED_MODEL_URL =
-            "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/main/" +
+            "https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/" +
                 RECOMMENDED_FILE_NAME +
                 "?download=true"
 
-        private const val MIN_READY_BYTES = 100L * 1024L * 1024L
+        private const val MIN_READY_BYTES = 800L * 1024L * 1024L
         private const val MAX_SCAN_FILES = 2_000
     }
 }
