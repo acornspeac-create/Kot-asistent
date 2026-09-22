@@ -48,16 +48,18 @@ node kot-flasher.mjs flash SERIAL ./firmware.example.json --execute
 Linux/macOS:
 ```bash
 export KOT_FLASHER_TOKEN="change-me-to-a-long-random-token"
+export KOT_FLASHER_HOST="0.0.0.0"
 npm start
 ```
 
 Windows PowerShell:
 ```powershell
 $env:KOT_FLASHER_TOKEN="change-me-to-a-long-random-token"
+$env:KOT_FLASHER_HOST="0.0.0.0"
 npm start
 ```
 
-Агент слушает только `127.0.0.1:8791`, поэтому по умолчанию недоступен другим устройствам в сети.
+По умолчанию агент слушает только `127.0.0.1:8791`. Чтобы управлять им из KOT Assistant на другом телефоне в той же Wi‑Fi сети, запустите агент с `KOT_FLASHER_HOST=0.0.0.0` и обязательно используйте длинный `KOT_FLASHER_TOKEN`.
 
 Endpoints:
 - `GET /health` — проверка агента и наличие ADB/Fastboot.
