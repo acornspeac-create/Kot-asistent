@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
@@ -227,17 +228,27 @@ private fun AssistantScreen(
             value = viewModel.serverUrl,
             onValueChange = { viewModel.serverUrl = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Адрес сервера, например https://example.com") },
+            label = { Text("Адрес AI-сервера") },
             singleLine = true,
             enabled = !viewModel.busy,
         )
 
+        OutlinedTextField(
+            value = viewModel.serverToken,
+            onValueChange = { viewModel.serverToken = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Ключ доступа к серверу") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            enabled = !viewModel.busy,
+        )
+
         Button(
-            onClick = viewModel::saveServerUrl,
+            onClick = viewModel::saveServerConfig,
             modifier = Modifier.fillMaxWidth(),
             enabled = !viewModel.busy,
         ) {
-            Text("Сохранить сервер")
+            Text("Сохранить AI-сервер")
         }
 
         LazyColumn(
