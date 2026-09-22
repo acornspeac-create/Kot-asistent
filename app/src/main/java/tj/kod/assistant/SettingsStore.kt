@@ -56,6 +56,22 @@ class SettingsStore(context: Context) {
     fun offlineVideoModelPath(): String =
         prefs.getString(KEY_OFFLINE_VIDEO_MODEL, "") ?: ""
 
+    fun continuousVoice(): Boolean =
+        prefs.getBoolean(KEY_CONTINUOUS_VOICE, false)
+
+    fun wakeWord(): String =
+        prefs.getString(KEY_WAKE_WORD, "кот") ?: "кот"
+
+    fun saveVoiceMode(
+        continuous: Boolean,
+        wakeWord: String,
+    ) {
+        prefs.edit()
+            .putBoolean(KEY_CONTINUOUS_VOICE, continuous)
+            .putString(KEY_WAKE_WORD, wakeWord.trim().ifBlank { "кот" })
+            .apply()
+    }
+
     fun saveOfflineModelPaths(
         text: String,
         image: String,
@@ -98,6 +114,8 @@ class SettingsStore(context: Context) {
             .put("offlineTextModelPath", offlineTextModelPath())
             .put("offlineImageModelPath", offlineImageModelPath())
             .put("offlineVideoModelPath", offlineVideoModelPath())
+            .put("continuousVoice", continuousVoice())
+            .put("wakeWord", wakeWord())
 
         val taskModes = JSONObject()
         KotTasks.all.forEach { task ->
@@ -119,5 +137,7 @@ class SettingsStore(context: Context) {
         const val KEY_OFFLINE_TEXT_MODEL = "offline_text_model"
         const val KEY_OFFLINE_IMAGE_MODEL = "offline_image_model"
         const val KEY_OFFLINE_VIDEO_MODEL = "offline_video_model"
+        const val KEY_CONTINUOUS_VOICE = "continuous_voice"
+        const val KEY_WAKE_WORD = "wake_word"
     }
 }
