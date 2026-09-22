@@ -41,7 +41,7 @@ class MemoryStore(context: Context) {
         prefs.edit().putString(KEY_MESSAGES, array.toString()).apply()
     }
 
-    fun recentTranscript(limit: Int = 20): String =
+    fun recentTranscript(limit: Int = 30): String =
         load()
             .takeLast(limit)
             .joinToString("\n") { item -> item.role + ": " + item.text }
@@ -64,6 +64,6 @@ class MemoryStore(context: Context) {
 
     private companion object {
         const val KEY_MESSAGES = "messages"
-        const val MAX_MESSAGES = 60
+        const val MAX_MESSAGES = 160
     }
 }
