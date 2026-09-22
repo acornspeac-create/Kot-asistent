@@ -14,10 +14,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -189,7 +189,7 @@ private fun AssistantScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
             text = "KOT Assistant",
@@ -220,8 +220,8 @@ private fun AssistantScreen(
 
         LazyColumn(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .fillMaxHeight(0.52f),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(viewModel.messages) { message ->
@@ -264,26 +264,20 @@ private fun AssistantScreen(
             maxLines = 4,
         )
 
-        Row(
+        Button(
+            onClick = onListen,
+            enabled = !viewModel.busy,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Button(
-                onClick = onListen,
-                enabled = !viewModel.busy,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text("🎙 Говорить")
-            }
+            Text("🎙 Говорить")
+        }
 
-            Button(
-                onClick = { viewModel.submit(onReply = onSpeak) },
-                enabled = !viewModel.busy && viewModel.input.isNotBlank(),
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(if (viewModel.busy) "Жду…" else "Отправить")
-            }
+        Button(
+            onClick = { viewModel.submit(onReply = onSpeak) },
+            enabled = !viewModel.busy && viewModel.input.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (viewModel.busy) "Жду…" else "Отправить")
         }
 
         Button(
