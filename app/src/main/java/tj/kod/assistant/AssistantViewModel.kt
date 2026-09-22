@@ -406,7 +406,7 @@ class AssistantViewModel(
             var usedOffline = !onlineConfigured
 
             val reply = if (!onlineConfigured) {
-                offlineAssistant.reply(clean, priorMessages)
+                offlineAssistant.reply(clean, priorMessages, personaMode, humorLevel)
             } else {
                 runCatching {
                     api.ask(
