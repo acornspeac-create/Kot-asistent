@@ -16,6 +16,7 @@ class AssistantViewModel(
     private val memory = MemoryStore(context)
     private val settings = SettingsStore(context)
     private val api = AssistantApi()
+    private val offlineAssistant = OfflineAssistant()
 
     val messages = mutableStateListOf<Message>()
 
@@ -32,7 +33,7 @@ class AssistantViewModel(
         settings.saveServerUrl(serverUrl)
         serverUrl = settings.serverUrl()
         status = if (serverUrl.isBlank()) {
-            "Адрес сервера очищен"
+            "Офлайн-режим"
         } else {
             "Адрес сервера сохранён"
         }
@@ -45,6 +46,7 @@ class AssistantViewModel(
         val clean = text.trim()
         if (clean.isEmpty() || busy) return
 
+        val priorMessages = memory.load()
         val priorHistory = memory.recentTranscript()
         input = ""
 
@@ -54,16 +56,23 @@ class AssistantViewModel(
 
         viewModelScope.launch {
             busy = true
-            status = "Думаю…"
+            status = if (serverUrl.isBlank()) "Офлайн…" else "Думаю…"
 
-            val reply = runCatching {
-                api.ask(
-                    serverUrl = serverUrl,
-                    text = clean,
-                    history = priorHistory,
-                )
-            }.getOrElse { throwable ->
-                "Ошибка связи: " + (throwable.message ?: "неизвестная ошибка")
+            var usedOffline = serverUrl.isBlank()
+
+            val reply = if (serverUrl.isBlank()) {
+                offlineAssistant.reply(clean, priorMessages)
+            } else {
+                runCatching {
+                    api.ask(
+                        serverUrl = serverUrl,
+                        text = clean,
+                        history = priorHistory,
+                    )
+                }.getOrElse {
+                    usedOffline = true
+                    offlineAssistant.reply(clean, priorMessages)
+                }
             }
 
             val assistantMessage = Message("assistant", reply)
@@ -71,7 +80,7 @@ class AssistantViewModel(
             memory.append(assistantMessage)
 
             busy = false
-            status = "Готов"
+            status = if (usedOffline) "Офлайн" else "Готов"
             onReply(reply)
         }
     }
