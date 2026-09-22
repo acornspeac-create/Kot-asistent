@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">KOT Assistant</string>
+    <string name="accessibility_description">Расширенный доступ KOT Assistant для автоматизации действий на устройстве.</string>
+</resources>
