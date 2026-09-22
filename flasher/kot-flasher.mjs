@@ -332,34 +332,62 @@ function ensureProductMatches(device, manifest) {
   }
 }
 
-function flash(serial, manifestPath, execute) {
-  const manifest = loadManifest(manifestPath);
-  const validation = validateManifest(manifest);
-
-  if (!validation.ok) {
-    return { ok: false, stage: "validate", ...validation };
+function ensureManifestMatchesDevice(device, manifest) {
+  if (
+    manifest.vendor &&
+    String(manifest.vendor).toLowerCase() !== String(device.vendor).toLowerCase()
+  ) {
+    throw new Error(
+      "Vendor mismatch. Device=" +
+        device.vendor +
+        ", manifest=" +
+        manifest.vendor
+    );
   }
 
-  const device = inspectDevice(serial);
+  const allowedProducts = Array.isArray(manifest.products)
+    ? manifest.products.map(String)
+    : [];
 
-  if (device.transport !== "fastboot") {
-    return {
-      ok: false,
-      stage: "mode",
-      error: "Device must be in fastboot mode",
-      device,
-      validation,
-    };
+  if (allowedProducts.length > 0) {
+    if (!device.product || !allowedProducts.includes(device.product)) {
+      throw new Error(
+        "Product mismatch. Device=" +
+          (device.product || "unknown") +
+          ", manifest=" +
+          allowedProducts.join(",")
+      );
+    }
+  } else if (device.transport === "fastboot") {
+    throw new Error("Fastboot manifest must declare products[]");
   }
 
-  ensureProductMatches(device, manifest);
+  const allowedModels = Array.isArray(manifest.models)
+    ? manifest.models.map((x) => String(x).toLowerCase())
+    : [];
 
-  if (!device.unlocked) {
+  if (
+    allowedModels.length > 0 &&
+    (!device.model || !allowedModels.includes(String(device.model).toLowerCase()))
+  ) {
+    throw new Error(
+      "Model mismatch. Device=" +
+        (device.model || "unknown") +
+        ", manifest=" +
+        manifest.models.join(",")
+    );
+  }
+}
+
+function flashFastboot(device, manifest, validation, execute) {
+  ensureManifestMatchesDevice(device, manifest);
+
+  if (manifest.requireUnlocked !== false && !device.unlocked) {
     return {
       ok: false,
       stage: "bootloader",
       error:
-        "Bootloader is not reported as unlocked. KOT Flasher will not bypass OEM/FRP locks.",
+        "Bootloader is not reported as unlocked. Use the official OEM unlock procedure first.",
       device,
       validation,
     };
@@ -369,7 +397,7 @@ function flash(serial, manifestPath, execute) {
     command: "fastboot",
     args: [
       "-s",
-      serial,
+      device.serial,
       "flash",
       String(part.name),
       safeResolve(manifest.firmwareDir, String(part.file)),
@@ -377,7 +405,14 @@ function flash(serial, manifestPath, execute) {
   }));
 
   if (!execute) {
-    return { ok: true, dryRun: true, device, validation, plan };
+    return {
+      ok: true,
+      dryRun: true,
+      driver: device.driver,
+      device,
+      validation,
+      plan,
+    };
   }
 
   const log = [];
@@ -394,6 +429,7 @@ function flash(serial, manifestPath, execute) {
       return {
         ok: false,
         stage: "flash",
+        driver: device.driver,
         failedPartition: step.args[3],
         device,
         validation,
@@ -403,18 +439,153 @@ function flash(serial, manifestPath, execute) {
   }
 
   if (manifest.wipe === true) {
-    const wipe = run(fastboot, ["-s", serial, "-w"], 180000);
+    const wipe = run(fastboot, ["-s", device.serial, "-w"], 180000);
     log.push(wipe);
+
     if (!wipe.ok) {
-      return { ok: false, stage: "wipe", device, validation, log };
+      return {
+        ok: false,
+        stage: "wipe",
+        driver: device.driver,
+        device,
+        validation,
+        log,
+      };
     }
   }
 
   if (manifest.reboot !== false) {
-    log.push(run(fastboot, ["-s", serial, "reboot"], 30000));
+    log.push(run(fastboot, ["-s", device.serial, "reboot"], 30000));
   }
 
-  return { ok: true, dryRun: false, device, validation, log };
+  return {
+    ok: true,
+    dryRun: false,
+    driver: device.driver,
+    device,
+    validation,
+    log,
+  };
+}
+
+function flashSamsungHeimdall(device, manifest, validation, execute) {
+  if (!toolAvailable(heimdall)) {
+    return {
+      ok: false,
+      stage: "driver",
+      error: "Heimdall is not installed or not available in PATH.",
+      device,
+      validation,
+    };
+  }
+
+  if (!device.rememberedFromAdb) {
+    return {
+      ok: false,
+      stage: "identity",
+      error:
+        "Samsung model/product could not be verified. Connect the phone in Android/ADB first so KOT can remember its exact identity, then reboot it to Download Mode.",
+      device,
+      validation,
+    };
+  }
+
+  ensureManifestMatchesDevice(device, manifest);
+
+  const args = ["flash"];
+
+  for (const part of manifest.partitions) {
+    const partition = String(part.heimdallName || part.name)
+      .replace(/[^a-zA-Z0-9_]/g, "")
+      .toUpperCase();
+
+    if (!partition) {
+      throw new Error("Invalid Heimdall partition name");
+    }
+
+    args.push(
+      "--" + partition,
+      safeResolve(manifest.firmwareDir, String(part.file))
+    );
+  }
+
+  if (manifest.reboot === false) {
+    args.push("--no-reboot");
+  }
+
+  const plan = [
+    {
+      command: "heimdall",
+      args,
+    },
+  ];
+
+  if (!execute) {
+    return {
+      ok: true,
+      dryRun: true,
+      driver: "samsung-heimdall",
+      device,
+      validation,
+      plan,
+    };
+  }
+
+  const result = run(
+    heimdall,
+    args,
+    Number(manifest.stepTimeoutMs || 300000)
+  );
+
+  return {
+    ok: result.ok,
+    dryRun: false,
+    stage: result.ok ? "done" : "flash",
+    driver: "samsung-heimdall",
+    device,
+    validation,
+    log: [result],
+    error: result.ok ? undefined : "Heimdall flashing failed",
+  };
+}
+
+function flash(serial, manifestPath, execute) {
+  const manifest = loadManifest(manifestPath);
+  const validation = validateManifest(manifest);
+
+  if (!validation.ok) {
+    return { ok: false, stage: "validate", ...validation };
+  }
+
+  const device = inspectDevice(serial);
+
+  if (device.transport === "adb") {
+    return {
+      ok: false,
+      stage: "mode",
+      error:
+        "Device is still in Android/ADB mode. Use reboot target 'flash' and KOT will choose Download Mode for Samsung or Bootloader/Fastboot for other supported vendors.",
+      driver: device.driver,
+      device,
+      validation,
+    };
+  }
+
+  if (device.transport === "heimdall") {
+    return flashSamsungHeimdall(device, manifest, validation, execute);
+  }
+
+  if (device.transport === "fastboot") {
+    return flashFastboot(device, manifest, validation, execute);
+  }
+
+  return {
+    ok: false,
+    stage: "driver",
+    error: "No supported flashing driver for transport: " + device.transport,
+    device,
+    validation,
+  };
 }
 
 function isAuthorized(req) {
@@ -462,7 +633,7 @@ function startServer() {
         return send(res, 200, {
           ok: true,
           name: "KOT Flasher Agent",
-          version: "0.1.0",
+          version: "0.2.0",
           ...listDevices(),
         });
       }
@@ -475,6 +646,27 @@ function startServer() {
         return send(res, 200, listDevices());
       }
 
+      if (req.method === "GET" && req.url === "/drivers") {
+        return send(res, 200, {
+          fastboot: [
+            "generic-fastboot",
+            "xiaomi-fastboot",
+            "google-fastboot",
+            "oneplus-fastboot",
+            "motorola-fastboot",
+            "oppo-fastboot",
+            "realme-fastboot",
+            "vivo-fastboot",
+            "nothing-fastboot",
+            "sony-fastboot",
+            "huawei-fastboot",
+            "honor-fastboot"
+          ],
+          samsung: ["samsung-heimdall"],
+          tools: listDevices().tools,
+        });
+      }
+
       if (req.method === "POST" && req.url === "/inspect") {
         const body = await bodyJson(req);
         return send(res, 200, inspectDevice(String(body.serial || "")));
@@ -483,25 +675,37 @@ function startServer() {
       if (req.method === "POST" && req.url === "/reboot") {
         const body = await bodyJson(req);
         const serial = String(body.serial || "");
-        const target = String(body.target || "system");
+        let target = String(body.target || "system");
         const device = inspectDevice(serial);
+
+        if (target === "auto" || target === "flash") {
+          target = device.vendor === "samsung" ? "download" : "bootloader";
+        }
 
         let result;
         if (device.transport === "adb") {
           const args = ["-s", serial, "reboot"];
-          if (target === "bootloader" || target === "recovery") {
+          if (
+            target === "bootloader" ||
+            target === "recovery" ||
+            target === "download"
+          ) {
             args.push(target);
           } else if (target !== "system") {
             return send(res, 400, { error: "Unsupported reboot target" });
           }
           result = run(adb, args);
-        } else {
+        } else if (device.transport === "fastboot") {
           if (target !== "system") {
             return send(res, 400, {
               error: "Fastboot reboot currently supports system only",
             });
           }
           result = run(fastboot, ["-s", serial, "reboot"]);
+        } else {
+          return send(res, 400, {
+            error: "Reboot is not supported for this transport",
+          });
         }
 
         return send(res, result.ok ? 200 : 500, result);
@@ -538,7 +742,7 @@ function startServer() {
     console.log(
       "KOT Flasher Agent listening on http://" + host + ":" + port
     );
-    console.log("ADB:", adb, "Fastboot:", fastboot);
+    console.log("ADB:", adb, "Fastboot:", fastboot, "Heimdall:", heimdall);
 
     if (!token) {
       console.log(
