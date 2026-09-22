@@ -27,11 +27,14 @@ class AssistantViewModel(
     private val automationStore = AutomationStore(context)
     private val localAi = LocalAiEngine(context)
     private val localModels = LocalModelManager(context)
+    private val localImage = LocalImageEngine(context)
+    private val localImageModels = LocalImageModelManager(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
     val profiles = mutableStateListOf<KotProfile>()
     val discoveredTextModels = mutableStateListOf<String>()
+    val discoveredImageModels = mutableStateListOf<String>()
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
@@ -62,6 +65,9 @@ class AssistantViewModel(
     var automationStatus by mutableStateOf("")
     var localModelStatus by mutableStateOf("Локальная LLM не установлена")
     var localModelDownloadId by mutableStateOf(-1L)
+    var imageModelStatus by mutableStateOf("Офлайн-модель фото не установлена")
+    var imageModelDownloadId by mutableStateOf(-1L)
+    var generatedImagePath by mutableStateOf("")
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -71,6 +77,7 @@ class AssistantViewModel(
         messages.addAll(memory.load())
         profiles.addAll(profilesStore.profiles())
         discoverLocalTextModels(selectFirstWhenEmpty = true)
+        discoverLocalImageModels(selectFirstWhenEmpty = true)
     }
 
     fun taskModeLabel(taskId: String): String =
@@ -262,6 +269,138 @@ class AssistantViewModel(
             }.onFailure {
                 localModelStatus =
                     "Ошибка локального ИИ: " +
+                        (it.message ?: it::class.java.simpleName)
+            }
+
+            busy = false
+        }
+    }
+
+    fun downloadRecommendedImageModel() {
+        val start = runCatching {
+            localImageModels.startRecommendedDownload()
+        }.getOrElse {
+            imageModelStatus =
+                "Не удалось начать загрузку фото-модели: " +
+                    (it.message ?: it::class.java.simpleName)
+            return
+        }
+
+        offlineImageModelPath = start.path
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+
+        if (start.alreadyReady) {
+            imageModelDownloadId = -1L
+            imageModelStatus = "Stable Diffusion 1.5 уже скачана"
+            discoverLocalImageModels(selectFirstWhenEmpty = false)
+        } else {
+            imageModelDownloadId = start.id
+            imageModelStatus =
+                "Загрузка Stable Diffusion 1.5 Q4_0 запущена (~1.57 ГБ)"
+        }
+    }
+
+    fun checkImageModelDownload() {
+        imageModelStatus =
+            localImageModels.downloadStatus(imageModelDownloadId)
+
+        if (localImageModels.isRecommendedReady()) {
+            offlineImageModelPath = localImageModels.recommendedPath()
+            settings.saveOfflineModelPaths(
+                text = offlineTextModelPath,
+                image = offlineImageModelPath,
+                video = offlineVideoModelPath,
+            )
+            discoverLocalImageModels(selectFirstWhenEmpty = false)
+            imageModelStatus =
+                "Фото-модель готова: " +
+                    File(offlineImageModelPath).name
+        }
+    }
+
+    fun discoverLocalImageModels(
+        selectFirstWhenEmpty: Boolean = false,
+    ) {
+        val found = localImageModels.discoverModels()
+        discoveredImageModels.clear()
+        discoveredImageModels.addAll(found)
+
+        if (
+            selectFirstWhenEmpty &&
+            offlineImageModelPath.isBlank() &&
+            found.isNotEmpty()
+        ) {
+            offlineImageModelPath = found.first()
+            settings.saveOfflineModelPaths(
+                text = offlineTextModelPath,
+                image = offlineImageModelPath,
+                video = offlineVideoModelPath,
+            )
+        }
+
+        imageModelStatus = when {
+            offlineImageModelPath.isNotBlank() &&
+                File(offlineImageModelPath).isFile ->
+                "Готова: " + File(offlineImageModelPath).name
+
+            found.isNotEmpty() ->
+                "Найдено моделей изображения: " + found.size
+
+            else ->
+                "Офлайн-модель фото не найдена"
+        }
+    }
+
+    fun selectLocalImageModel(path: String) {
+        offlineImageModelPath = path
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        imageModelStatus = "Выбрана: " + File(path).name
+    }
+
+    fun generateOfflineImage() {
+        if (busy) return
+
+        val prompt = input.trim()
+        if (prompt.isBlank()) {
+            imageModelStatus = "Сначала опиши изображение"
+            return
+        }
+
+        val modelPath = offlineImageModelPath.trim()
+        if (modelPath.isBlank() || !File(modelPath).isFile) {
+            imageModelStatus =
+                "Сначала скачай или выбери модель изображения"
+            return
+        }
+
+        viewModelScope.launch {
+            busy = true
+            imageModelStatus =
+                "Генерирую полностью офлайн • CPU • 512×512…"
+
+            runCatching {
+                localImage.generate(
+                    modelPath = modelPath,
+                    prompt = prompt,
+                    width = 512,
+                    height = 512,
+                    steps = 20,
+                )
+            }.onSuccess { result ->
+                generatedImagePath = result.filePath
+                imageModelStatus =
+                    "Готово офлайн: " + File(result.filePath).name
+            }.onFailure {
+                imageModelStatus =
+                    "Ошибка офлайн-фото: " +
                         (it.message ?: it::class.java.simpleName)
             }
 
@@ -889,6 +1028,7 @@ class AssistantViewModel(
     }
 
     override fun onCleared() {
+        localImage.close()
         localAi.close()
         super.onCleared()
     }

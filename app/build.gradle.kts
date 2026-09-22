@@ -19,6 +19,20 @@ android {
         targetSdk = 35
         versionCode = ciRunNumber
         versionName = "0.1." + ciRunNumber
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags += listOf("-O3", "-DNDEBUG")
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DGGML_OPENMP=OFF",
+                )
+            }
+        }
     }
 
     signingConfigs {
@@ -47,6 +61,15 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    ndkVersion = "28.0.13004108"
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 }
 

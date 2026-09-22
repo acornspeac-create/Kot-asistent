@@ -1,5 +1,7 @@
 package tj.kod.assistant
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -194,11 +198,70 @@ fun KotTaskScreen(
             "image" -> {
                 item {
                     Text(
-                        "Офлайн: путь к локальной модели изображения задаётся в разделе «Офлайн-модели».",
+                        viewModel.imageModelStatus,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = viewModel.input,
+                        onValueChange = { viewModel.input = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Опиши изображение") },
+                        minLines = 3,
+                        enabled = !viewModel.busy,
+                    )
+                }
+
+                item {
+                    Button(
+                        onClick = viewModel::generateOfflineImage,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !viewModel.busy &&
+                            viewModel.input.isNotBlank(),
+                    ) {
+                        Text(
+                            if (viewModel.busy) {
+                                "Генерирую…"
+                            } else {
+                                "Сгенерировать полностью офлайн"
+                            }
+                        )
+                    }
+                }
+
+                if (viewModel.generatedImagePath.isNotBlank()) {
+                    item {
+                        val bitmap = remember(
+                            viewModel.generatedImagePath
+                        ) {
+                            BitmapFactory.decodeFile(
+                                viewModel.generatedImagePath
+                            )
+                        }
+
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "Фото KOT",
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        Text(
+                            "Файл: " + viewModel.generatedImagePath,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                item {
+                    Text(
+                        "Модель и загрузка находятся в «Офлайн-модели». Первый запуск после выбора модели может быть медленным.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                item { CommandBox(viewModel, onSpeak, "Опиши изображение") }
             }
 
             "video" -> {
@@ -623,11 +686,66 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
             Text(if (viewModel.busy) "Проверяю…" else "Проверить офлайн ИИ")
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "Офлайн-генерация фото",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    viewModel.imageModelStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    "Stable Diffusion 1.5 Q4_0 • около 1.57 ГБ • stable-diffusion.cpp.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = viewModel::downloadRecommendedImageModel,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Скачать модель фото")
+                }
+                Button(
+                    onClick = viewModel::checkImageModelDownload,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Проверить загрузку фото-модели")
+                }
+                Button(
+                    onClick = { viewModel.discoverLocalImageModels() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Найти модели фото на телефоне")
+                }
+            }
+        }
+
+        viewModel.discoveredImageModels.forEach { path ->
+            Button(
+                onClick = { viewModel.selectLocalImageModel(path) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.busy,
+            ) {
+                val selected = path == viewModel.offlineImageModelPath
+                Text(
+                    (if (selected) "✓ " else "") +
+                        java.io.File(path).name
+                )
+            }
+        }
+
         OutlinedTextField(
             value = viewModel.offlineImageModelPath,
             onValueChange = { viewModel.offlineImageModelPath = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Модель генерации фото (следующий модуль)") },
+            label = { Text("Модель генерации фото (.gguf/.safetensors)") },
         )
 
         OutlinedTextField(

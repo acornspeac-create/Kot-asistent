@@ -40,6 +40,18 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Install Android native toolchain
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "ndk;28.0.13004108" "cmake;3.22.1"
+
+      - name: Cache stable-diffusion.cpp source
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx/**/_deps
+          key: kot-sdcpp-c92d73c-arm64-v1
+
       - name: Restore stable development signing key
         uses: actions/cache@v4
         with:
