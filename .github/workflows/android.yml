@@ -38,6 +38,15 @@ jobs:
           path: ~/.android/debug.keystore
           key: kot-assistant-development-signing-v1
 
+      - name: Ensure stable development signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair               -keystore "$HOME/.android/debug.keystore"               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=KOT Assistant Development,O=KOT Assistant,C=TJ"               -keyalg RSA               -keysize 2048               -validity 10000
+          fi
+
       - name: Build debug APK
         run: gradle :app:assembleDebug
 
