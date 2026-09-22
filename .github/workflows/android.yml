@@ -65,6 +65,7 @@ jobs:
           path: ${{ steps.apk.outputs.name }}
 
       - name: Publish automatic update release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           APK_NAME: ${{ steps.apk.outputs.name }}
@@ -72,8 +73,16 @@ jobs:
         run: |
           TAG="v0.1.${GITHUB_RUN_NUMBER}"
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK_NAME" --clobber
-          else
-            gh release create "$TAG" "$APK_NAME"               --target "$GITHUB_SHA"               --title "KOT Assistant $TAG"               --notes "Automatic KOT Assistant build. The app checks GitHub for newer releases in the background."
-          fi
+          for ATTEMPT in 1 2 3; do
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              gh release upload "$TAG" "$APK_NAME" --clobber && exit 0
+            else
+              gh release create "$TAG" "$APK_NAME"                 --target "$GITHUB_SHA"                 --title "KOT Assistant $TAG"                 --notes "Automatic KOT Assistant build. The app checks GitHub for newer releases in the background." && exit 0
+            fi
+
+            echo "Release attempt $ATTEMPT failed; retrying..."
+            sleep $((ATTEMPT * 10))
+          done
+
+          echo "Release publishing is temporarily unavailable. APK artifact was built successfully."
+          exit 1
