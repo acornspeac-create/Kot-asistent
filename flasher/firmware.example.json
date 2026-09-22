@@ -1,0 +1,20 @@
+{
+  "name": "Example firmware package",
+  "products": ["example_device"],
+  "firmwareDir": "./images",
+  "stepTimeoutMs": 180000,
+  "wipe": false,
+  "reboot": true,
+  "partitions": [
+    {
+      "name": "boot",
+      "file": "boot.img",
+      "sha256": "REPLACE_WITH_REAL_SHA256"
+    },
+    {
+      "name": "vendor_boot",
+      "file": "vendor_boot.img",
+      "sha256": "REPLACE_WITH_REAL_SHA256"
+    }
+  ]
+}
