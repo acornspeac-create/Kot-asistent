@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.absoluteValue
 
 class OfflineAssistant {
     fun reply(
@@ -15,9 +16,7 @@ class OfflineAssistant {
         val clean = text.trim()
         val lower = clean.lowercase(Locale.getDefault())
 
-        calculate(clean)?.let { result ->
-            return result
-        }
+        calculate(clean)?.let { return it }
 
         if (
             lower.contains("который час") ||
@@ -39,20 +38,91 @@ class OfflineAssistant {
             ) + "."
         }
 
+        if (isGreeting(lower)) {
+            return when (persona) {
+                PersonaMode.FUNNY_FRIEND ->
+                    if (humorLevel >= 2) "Привет, брат! Я здесь. Что сегодня разнесём по задачам?"
+                    else "Привет! Я здесь. Чем займёмся?"
+                PersonaMode.FUNNY_GIRLFRIEND ->
+                    if (humorLevel >= 2) "Привет! Я на связи. Ну что, спасаем день от скуки?"
+                    else "Привет! Я здесь. Что хочешь сделать?"
+                PersonaMode.BUSINESS -> "Привет. Я готов. Какая задача первая?"
+                else -> "Привет! Я здесь. Что будем делать?"
+            }
+        }
+
+        if (isHowAreYou(lower)) {
+            return when (persona) {
+                PersonaMode.FUNNY_FRIEND ->
+                    if (humorLevel >= 2) "Нормально, процессор не дымится — уже успех. А ты как?"
+                    else "Всё нормально. А ты как?"
+                PersonaMode.FUNNY_GIRLFRIEND ->
+                    if (humorLevel >= 2) "Отлично. Настроение рабочее, скуку сегодня не пропускаем. А ты как?"
+                    else "Хорошо. А у тебя как дела?"
+                PersonaMode.BUSINESS -> "В рабочем режиме. Что нужно решить?"
+                else -> "Всё хорошо, я на месте. А ты как?"
+            }
+        }
+
+        if (isWhatAreYouDoing(lower)) {
+            return when (persona) {
+                PersonaMode.FUNNY_FRIEND ->
+                    if (humorLevel >= 2) "Жду твою следующую команду и делаю вид, что не скучал."
+                    else "Жду твою следующую задачу."
+                PersonaMode.BUSINESS -> "Готов обрабатывать следующую задачу."
+                else -> "Сейчас общаюсь с тобой и жду следующую задачу."
+            }
+        }
+
         if (
-            lower.startsWith("привет") ||
-            lower.startsWith("здравств") ||
-            lower == "хай"
+            lower == "спасибо" ||
+            lower == "спс" ||
+            lower.startsWith("спасибо ")
         ) {
-            return "Я здесь. Сейчас работаю в офлайн-режиме."
+            return when (persona) {
+                PersonaMode.FUNNY_FRIEND -> "Всегда пожалуйста. Погнали дальше."
+                PersonaMode.BUSINESS -> "Пожалуйста. Готов к следующей задаче."
+                else -> "Пожалуйста! Что ещё сделать?"
+            }
+        }
+
+        if (
+            lower.contains("мне скучно") ||
+            lower == "скучно" ||
+            lower.contains("развесели")
+        ) {
+            return when (persona) {
+                PersonaMode.FUNNY_FRIEND ->
+                    "Тогда так: либо я кидаю тебе короткую шутку, либо придумываем безумную, но полезную задачу. Выбирай."
+                PersonaMode.FUNNY_GIRLFRIEND ->
+                    "Скуку отменяем. Могу пошутить, придумать игру на двоих в чате или просто поболтать."
+                else ->
+                    "Могу развлечь: шутка, мини-игра, загадка или просто разговор. Что выбираешь?"
+            }
+        }
+
+        if (
+            lower.contains("кто ты") ||
+            lower.contains("как тебя зовут") ||
+            lower == "ты кто"
+        ) {
+            return "Я KOT — твой личный ассистент. Могу работать с текстом, голосом, локальной памятью, задачами телефона и ИИ-моделью, если она установлена."
+        }
+
+        if (
+            lower.contains("ты онлайн") ||
+            lower.contains("ты офлайн") ||
+            lower.contains("есть интернет")
+        ) {
+            return "Сейчас этот ответ сформирован локально. Режим подключения KOT выбирается отдельно для каждой задачи."
         }
 
         if (
             lower.contains("что ты умеешь") ||
-            lower.contains("помощь") ||
+            lower.contains("что умеешь") ||
             lower == "команды"
         ) {
-            return "Офлайн я помню локальный диалог, могу отвечать на простые команды, показывать время и дату, считать базовые примеры и работать голосом. Для сложных вопросов и интернета подключаю сервер."
+            return "Могу общаться, помнить локальный диалог, считать, работать с голосом, выполнять разрешённые действия на телефоне и подключать локальный или серверный ИИ. Скажи задачу обычными словами."
         }
 
         if (
@@ -65,56 +135,142 @@ class OfflineAssistant {
                 .firstOrNull { it.role == "user" && it.text != clean }
 
             return if (previous != null) {
-                "Последнее сохранённое сообщение: " + previous.text
+                "Ты до этого написал: «" + previous.text + "»."
             } else {
-                "В локальной памяти пока нет предыдущего сообщения."
+                "Предыдущего сообщения в локальной памяти пока нет."
             }
         }
 
         if (lower.startsWith("запомни ")) {
-            return "Запомнил локально. Это сообщение сохранено в памяти телефона."
+            return "Запомнил это в локальной истории диалога."
         }
 
-        return when (persona) {
-            PersonaMode.FUNNY_FRIEND -> {
-                val extra = if (humorLevel >= 2) {
-                    " Но я на месте — можем хотя бы не дать скуке победить без боя."
-                } else {
-                    ""
-                }
-                "Брат, я сейчас полностью офлайн. Сообщение запомнил." + extra
-            }
+        if (
+            lower.startsWith("повтори") ||
+            lower.contains("что ты сказал")
+        ) {
+            val previousAssistant = messages
+                .asReversed()
+                .firstOrNull { it.role == "assistant" }
 
-            PersonaMode.FUNNY_GIRLFRIEND -> {
-                val extra = if (humorLevel >= 2) {
-                    " И да, скучать в мою смену запрещено."
-                } else {
-                    ""
-                }
-                "Я рядом и сейчас работаю офлайн. Всё сохранила." + extra
-            }
-
-            PersonaMode.ADULT_COMPANION ->
-                "Я рядом. Сейчас работаю офлайн и могу поддержать лёгкий взрослый, флиртующий разговор в пределах локальных возможностей."
-
-            PersonaMode.BUSINESS ->
-                "Офлайн-режим активен. Запрос сохранён. Для расширенного анализа нужен локальный ИИ-модуль или онлайн-сервер."
-
-            PersonaMode.TEACHER ->
-                "Я офлайн. Запрос сохранил; простые вещи могу разбирать локально, а для сложного объяснения нужна локальная модель или сервер."
-
-            PersonaMode.MECHANIC ->
-                "Я офлайн. Запрос по технике сохранил. Для подробной диагностики подключи локальную модель или онлайн-режим."
-
-            PersonaMode.BUILDER ->
-                "Я офлайн. Задачу по строительству сохранил. Базовые расчёты доступны локально."
-
-            PersonaMode.PROGRAMMER ->
-                "Офлайн-режим. Команду сохранил; простые локальные действия доступны, для полноценной генерации кода нужна локальная модель или сервер."
-
-            PersonaMode.NORMAL ->
-                "Сейчас я офлайн. Я сохранил твоё сообщение в локальной памяти. Для полного ИИ-ответа нужен установленный локальный ИИ или доступ к серверу."
+            return previousAssistant?.text
+                ?: "У меня пока нет предыдущего ответа, который можно повторить."
         }
+
+        if (
+            lower.contains("погода") ||
+            lower.contains("курс валют") ||
+            lower.contains("новости сегодня")
+        ) {
+            return "Для актуальных данных нужен интернет. Я не буду придумывать текущую информацию."
+        }
+
+        return fallback(
+            clean = clean,
+            messages = messages,
+            persona = persona,
+            humorLevel = humorLevel,
+        )
+    }
+
+    private fun isGreeting(lower: String): Boolean {
+        val value = lower.trim(' ', '!', '?', '.', ',')
+        return value == "привет" ||
+            value == "хай" ||
+            value == "салам" ||
+            value.startsWith("здравств") ||
+            value.startsWith("доброе утро") ||
+            value.startsWith("добрый день") ||
+            value.startsWith("добрый вечер")
+    }
+
+    private fun isHowAreYou(lower: String): Boolean {
+        val value = lower.trim(' ', '!', '?', '.', ',')
+        return value == "как ты" ||
+            value == "как дела" ||
+            value == "как у тебя дела" ||
+            value == "как поживаешь" ||
+            value == "как жизнь"
+    }
+
+    private fun isWhatAreYouDoing(lower: String): Boolean {
+        val value = lower.trim(' ', '!', '?', '.', ',')
+        return value == "что делаешь" ||
+            value == "чем занимаешься" ||
+            value == "что сейчас делаешь"
+    }
+
+    private fun fallback(
+        clean: String,
+        messages: List<Message>,
+        persona: PersonaMode,
+        humorLevel: Int,
+    ): String {
+        val lastUser = messages
+            .asReversed()
+            .firstOrNull { it.role == "user" && it.text != clean }
+            ?.text
+            ?.take(120)
+
+        val options = when (persona) {
+            PersonaMode.FUNNY_FRIEND -> listOf(
+                "Понял тебя. Дай чуть больше деталей — разберём это нормально, а не ответом из трёх слов.",
+                "Смысл уловил. Уточни, что именно хочешь получить на выходе, и я продолжу.",
+                if (humorLevel >= 2)
+                    "Я в теме, но тут мне нужен ещё один кусочек контекста, иначе начну гадать как сосед у подъезда."
+                else
+                    "Я понял направление. Уточни один момент, чтобы ответ был точнее.",
+            )
+
+            PersonaMode.FUNNY_GIRLFRIEND -> listOf(
+                "Поняла. Дай мне ещё немного деталей, и отвечу по существу.",
+                "Я с тобой. Уточни, что именно хочешь узнать или сделать.",
+                if (humorLevel >= 2)
+                    "Почти поймала мысль. Ещё одна деталь — и не придётся играть в телепата."
+                else
+                    "Уточни немного, чтобы я не додумывала за тебя.",
+            )
+
+            PersonaMode.BUSINESS -> listOf(
+                "Запрос понял. Уточни ожидаемый результат.",
+                "Нужно немного больше данных. Что именно должно получиться в итоге?",
+                "Уточни ключевое условие задачи, и продолжу.",
+            )
+
+            PersonaMode.TEACHER -> listOf(
+                "Давай разберём. Сформулируй, что именно непонятно, и я объясню по шагам.",
+                "Уточни вопрос чуть конкретнее — так объяснение получится полезнее.",
+                "Я понял тему. Напиши, какой именно момент нужно объяснить.",
+            )
+
+            PersonaMode.MECHANIC -> listOf(
+                "Чтобы не гадать, дай симптомы, модель и что уже проверяли.",
+                "Понял направление. Нужны ещё детали по машине или неисправности.",
+                "Опиши проблему подробнее: что происходит, когда и при каких условиях.",
+            )
+
+            PersonaMode.BUILDER -> listOf(
+                "Нужны размеры и что именно хочешь получить — тогда посчитаю или предложу решение.",
+                "Понял задачу. Дай размеры, материал или фото, если они важны.",
+                "Уточни размеры и цель работы, чтобы ответ был точным.",
+            )
+
+            PersonaMode.PROGRAMMER -> listOf(
+                "Дай код, ошибку или ожидаемое поведение — разберу точнее.",
+                "Понял задачу. Нужен фрагмент кода или точный результат, который ожидаешь.",
+                "Уточни стек, ошибку и что должно происходить.",
+            )
+
+            PersonaMode.ADULT_COMPANION,
+            PersonaMode.NORMAL -> listOf(
+                "Понял. Уточни немного, что именно хочешь узнать или сделать.",
+                "Я тебя услышал. Дай ещё одну деталь, и продолжим по делу.",
+                "Могу помочь с этим. Скажи, какой результат тебе нужен.",
+            )
+        }
+
+        val seed = clean.hashCode() + messages.size + (lastUser?.hashCode() ?: 0)
+        return options[seed.absoluteValue % options.size]
     }
 
     private fun calculate(text: String): String? {
