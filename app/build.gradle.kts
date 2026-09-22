@@ -18,7 +18,11 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = ciRunNumber
-        versionName = "0.1." + ciRunNumber
+        versionName = "0.2." + ciRunNumber
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     signingConfigs {
@@ -66,6 +70,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.16.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
