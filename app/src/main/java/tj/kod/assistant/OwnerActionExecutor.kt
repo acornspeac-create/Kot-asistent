@@ -16,6 +16,26 @@ class OwnerActionExecutor(
 ) {
     private val packageManager = context.packageManager
 
+    fun tryExecuteSequence(text: String): String? {
+        val steps = text
+            .split(';')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+
+        if (steps.size < 2) return tryExecute(text)
+
+        val results = mutableListOf<String>()
+
+        for (step in steps) {
+            val result = tryExecute(step)
+                ?: return "Не понял шаг «$step». Выполнено шагов: " + results.size
+            results += result
+        }
+
+        return "Выполнил " + results.size + " шагов:\n" +
+            results.joinToString("\n")
+    }
+
     fun tryExecute(text: String): String? {
         val clean = text.trim()
         val lower = clean.lowercase(Locale.getDefault())
