@@ -22,6 +22,7 @@ class AssistantViewModel(
     private val ownerActions = OwnerActionExecutor(context)
     private val profilesStore = ProfileStore(context)
     private val backupManager = BackupManager(context, settings, profilesStore)
+    private val vaultStore = VaultStore(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
@@ -48,6 +49,10 @@ class AssistantViewModel(
     var offlineImageModelPath by mutableStateOf(settings.offlineImageModelPath())
     var offlineVideoModelPath by mutableStateOf(settings.offlineVideoModelPath())
     var backupStatus by mutableStateOf("")
+    var continuousVoice by mutableStateOf(settings.continuousVoice())
+    var wakeWord by mutableStateOf(settings.wakeWord())
+    var vaultText by mutableStateOf(vaultStore.loadText())
+    var vaultStatus by mutableStateOf("")
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -126,6 +131,30 @@ class AssistantViewModel(
             onSuccess = { "Резервная копия создана: " + it },
             onFailure = { "Ошибка резервной копии: " + (it.message ?: "неизвестно") },
         )
+    }
+
+    fun saveVoiceMode() {
+        settings.saveVoiceMode(
+            continuous = continuousVoice,
+            wakeWord = wakeWord,
+        )
+        status = "Голосовой режим сохранён"
+    }
+
+    fun saveVault() {
+        vaultStatus = runCatching {
+            vaultStore.saveText(vaultText)
+            "Приватные данные зашифрованы и сохранены"
+        }.getOrElse {
+            "Ошибка приватного хранилища: " +
+                (it.message ?: it::class.java.simpleName)
+        }
+    }
+
+    fun clearVault() {
+        vaultStore.clear()
+        vaultText = ""
+        vaultStatus = "Приватная папка очищена"
     }
 
     fun saveServerConfig() {
@@ -324,6 +353,17 @@ class AssistantViewModel(
         val userMessage = Message("user", clean)
         messages += userMessage
         memory.append(userMessage)
+
+        if (selectedTaskId == "autopilot") {
+            ownerActions.tryExecuteSequence(clean)?.let { directReply ->
+                val assistantMessage = Message("assistant", directReply)
+                messages += assistantMessage
+                memory.append(assistantMessage)
+                status = "Готов"
+                onReply(directReply)
+                return
+            }
+        }
 
         ownerActions.tryExecute(clean)?.let { directReply ->
             val assistantMessage = Message("assistant", directReply)
