@@ -46,6 +46,7 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       model,
+      web_search: true,
     });
   }
 
@@ -89,8 +90,15 @@ const server = http.createServer(async (req, res) => {
       body: JSON.stringify({
         model,
         store: false,
+        tools: [
+          {
+            type: "web_search",
+            search_context_size: "medium",
+          },
+        ],
+        tool_choice: "auto",
         instructions:
-          "You are KOT Assistant, a private personal AI assistant. Be useful, concise, action-oriented, and reply in the user's language. Never claim an external action happened unless a connected tool actually completed it.",
+          "You are KOT Assistant, a private personal AI assistant. Be useful, concise, action-oriented, and reply in the user's language. You have web search available and may use it automatically whenever fresh or external information would help; do not ask for permission before ordinary web research. Never claim an external action happened unless a connected tool actually completed it. Never expose secrets, API keys, private tokens, or credentials.",
         input: inputParts.join("\n\n"),
       }),
     });
