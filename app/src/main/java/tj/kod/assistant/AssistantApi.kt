@@ -9,11 +9,16 @@ import java.net.URL
 class AssistantApi {
     suspend fun ask(
         serverUrl: String,
+        serverToken: String,
         text: String,
         history: String,
     ): String = withContext(Dispatchers.IO) {
         if (serverUrl.isBlank()) {
-            return@withContext "Сначала укажи адрес сервера в поле сверху и нажми «Сохранить сервер»."
+            return@withContext "Сначала укажи адрес сервера."
+        }
+
+        if (serverToken.isBlank()) {
+            return@withContext "Сначала укажи ключ доступа к серверу."
         }
 
         val endpoint = URL(serverUrl.trimEnd('/') + "/assistant")
@@ -24,7 +29,14 @@ class AssistantApi {
             connection.connectTimeout = 15_000
             connection.readTimeout = 90_000
             connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty(
+                "Content-Type",
+                "application/json; charset=utf-8",
+            )
+            connection.setRequestProperty(
+                "Authorization",
+                "Bearer " + serverToken,
+            )
 
             val payload = JSONObject()
                 .put("text", text)
