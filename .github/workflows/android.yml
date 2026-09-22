@@ -43,8 +43,12 @@ jobs:
       - name: Install Android native toolchain
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "ndk;28.0.13004108" "cmake;3.22.1"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;28.0.13004108" "cmake;3.22.1"
 
       - name: Cache stable-diffusion.cpp source
         uses: actions/cache@v4
