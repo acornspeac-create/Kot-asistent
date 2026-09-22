@@ -16,13 +16,23 @@ class AssistantViewModel(
     private val memory = MemoryStore(context)
     private val settings = SettingsStore(context)
     private val api = AssistantApi()
+    private val flasherApi = FlasherApi()
     private val offlineAssistant = OfflineAssistant()
 
     val messages = mutableStateListOf<Message>()
+    val flasherDevices = mutableStateListOf<FlasherDevice>()
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
     var serverToken by mutableStateOf(settings.serverToken())
+    var flasherUrl by mutableStateOf(settings.flasherUrl())
+    var flasherToken by mutableStateOf(settings.flasherToken())
+    var flasherManifestPath by mutableStateOf("")
+    var flasherConfirmation by mutableStateOf("")
+    var selectedFlasherSerial by mutableStateOf("")
+    var showFlasher by mutableStateOf(false)
+    var flasherBusy by mutableStateOf(false)
+    var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
     var status by mutableStateOf("Готов")
 
@@ -43,6 +53,141 @@ class AssistantViewModel(
             serverUrl.isBlank() -> "Офлайн-режим"
             serverToken.isBlank() -> "Нужен ключ сервера"
             else -> "Сервер настроен"
+        }
+    }
+
+    fun saveFlasherConfig() {
+        settings.saveFlasherConfig(
+            url = flasherUrl,
+            token = flasherToken,
+        )
+
+        flasherUrl = settings.flasherUrl()
+        flasherToken = settings.flasherToken()
+        flasherStatus = when {
+            flasherUrl.isBlank() -> "Укажи адрес KOT Flasher Agent"
+            flasherToken.isBlank() -> "Укажи токен KOT Flasher Agent"
+            else -> "Настройки flasher сохранены"
+        }
+    }
+
+    fun refreshFlasherDevices() {
+        if (flasherBusy) return
+
+        viewModelScope.launch {
+            flasherBusy = true
+            flasherStatus = "Ищу телефоны…"
+
+            runCatching {
+                flasherApi.devices(
+                    agentUrl = flasherUrl,
+                    agentToken = flasherToken,
+                )
+            }.onSuccess { devices ->
+                flasherDevices.clear()
+                flasherDevices.addAll(devices)
+
+                if (selectedFlasherSerial.isNotBlank() &&
+                    devices.none { it.serial == selectedFlasherSerial }
+                ) {
+                    selectedFlasherSerial = ""
+                }
+
+                flasherStatus = if (devices.isEmpty()) {
+                    "Телефоны не найдены"
+                } else {
+                    "Найдено устройств: " + devices.size
+                }
+            }.onFailure {
+                flasherStatus = it.message ?: "Ошибка подключения к KOT Flasher Agent"
+            }
+
+            flasherBusy = false
+        }
+    }
+
+    fun selectFlasherDevice(serial: String) {
+        selectedFlasherSerial = serial
+        flasherConfirmation = ""
+        flasherStatus = "Выбрано устройство: " + serial
+    }
+
+    fun checkFlashPlan() {
+        if (flasherBusy) return
+
+        if (selectedFlasherSerial.isBlank()) {
+            flasherStatus = "Сначала выбери телефон"
+            return
+        }
+
+        if (flasherManifestPath.isBlank()) {
+            flasherStatus = "Укажи путь к manifest JSON на компьютере"
+            return
+        }
+
+        viewModelScope.launch {
+            flasherBusy = true
+            flasherStatus = "Проверяю прошивку без записи…"
+
+            runCatching {
+                flasherApi.flash(
+                    agentUrl = flasherUrl,
+                    agentToken = flasherToken,
+                    serial = selectedFlasherSerial,
+                    manifestPath = flasherManifestPath,
+                    execute = false,
+                )
+            }.onSuccess {
+                flasherStatus = it
+            }.onFailure {
+                flasherStatus = it.message ?: "Не удалось проверить план прошивки"
+            }
+
+            flasherBusy = false
+        }
+    }
+
+    fun executeFlash() {
+        if (flasherBusy) return
+
+        val serial = selectedFlasherSerial
+        if (serial.isBlank()) {
+            flasherStatus = "Сначала выбери телефон"
+            return
+        }
+
+        if (flasherManifestPath.isBlank()) {
+            flasherStatus = "Укажи путь к manifest JSON на компьютере"
+            return
+        }
+
+        val expected = "FLASH " + serial
+        if (flasherConfirmation != expected) {
+            flasherStatus = "Для запуска введи точно: " + expected
+            return
+        }
+
+        viewModelScope.launch {
+            flasherBusy = true
+            flasherStatus = "Прошивка выполняется. Не отключай USB…"
+
+            runCatching {
+                flasherApi.flash(
+                    agentUrl = flasherUrl,
+                    agentToken = flasherToken,
+                    serial = serial,
+                    manifestPath = flasherManifestPath,
+                    execute = true,
+                    confirmation = flasherConfirmation,
+                )
+            }.onSuccess {
+                flasherStatus = it
+                flasherConfirmation = ""
+            }.onFailure {
+                flasherStatus = it.message ?: "Ошибка прошивки"
+            }
+
+            flasherBusy = false
         }
     }
 
