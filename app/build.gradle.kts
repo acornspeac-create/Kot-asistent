@@ -4,6 +4,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")
+    ?.toIntOrNull()
+    ?.coerceAtLeast(1)
+    ?: 1
+
 android {
     namespace = "tj.kod.assistant"
     compileSdk = 35
@@ -12,8 +17,8 @@ android {
         applicationId = "tj.kod.assistant"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ciRunNumber
+        versionName = "0.1." + ciRunNumber
     }
 
     buildFeatures {
@@ -41,6 +46,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
