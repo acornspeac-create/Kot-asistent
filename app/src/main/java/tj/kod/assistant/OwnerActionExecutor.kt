@@ -6,6 +6,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.os.Environment
+import androidx.core.content.FileProvider
+import java.io.File
 import java.util.Locale
 
 class OwnerActionExecutor(
@@ -88,6 +91,16 @@ class OwnerActionExecutor(
                 return ownerStatus()
             }
 
+            lower.startsWith("найди файл ") -> {
+                val query = clean.substringAfter("найди файл ", "").trim()
+                return findFile(query)
+            }
+
+            lower.startsWith("установи apk ") -> {
+                val path = clean.substringAfter("установи apk ", "").trim()
+                return installApk(path)
+            }
+
             lower.startsWith("открой ") -> {
                 val requested = clean.substringAfter(" ", "").trim()
                 if (requested.isNotBlank()) {
@@ -145,6 +158,92 @@ class OwnerActionExecutor(
             append(". Не выдано обычных разрешений: ")
             append(missing)
             append(".")
+        }
+    }
+
+    private fun findFile(query: String): String {
+        if (query.isBlank()) {
+            return "Укажи имя файла после команды «найди файл»."
+        }
+
+        if (!AccessController.hasAllFilesAccess()) {
+            return "Нужен доступ ко всем файлам. Включи его один раз в «Максимальный доступ»."
+        }
+
+        val root = Environment.getExternalStorageDirectory()
+        if (!root.exists()) {
+            return "Хранилище недоступно."
+        }
+
+        val needle = query.lowercase(Locale.getDefault())
+        val matches = mutableListOf<String>()
+        var inspected = 0
+
+        root.walkTopDown().forEach { file ->
+            if (inspected >= 50_000 || matches.size >= 5) {
+                return@forEach
+            }
+
+            inspected += 1
+
+            if (
+                file.isFile &&
+                file.name.lowercase(Locale.getDefault()).contains(needle)
+            ) {
+                matches += file.absolutePath
+            }
+        }
+
+        return if (matches.isEmpty()) {
+            "Файл «$query» не найден."
+        } else {
+            "Нашёл:\n" + matches.joinToString("\n")
+        }
+    }
+
+    private fun installApk(path: String): String {
+        if (path.isBlank()) {
+            return "Укажи полный путь к APK."
+        }
+
+        val source = File(path)
+        if (!source.exists() || !source.isFile) {
+            return "APK не найден: $path"
+        }
+
+        if (!source.name.endsWith(".apk", ignoreCase = true)) {
+            return "Файл не похож на APK: " + source.name
+        }
+
+        val updatesDir = File(context.filesDir, "updates")
+        updatesDir.mkdirs()
+
+        val safeName = source.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val target = File(updatesDir, safeName)
+
+        return runCatching {
+            source.copyTo(target, overwrite = true)
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                context.packageName + ".fileprovider",
+                target,
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(
+                    uri,
+                    "application/vnd.android.package-archive",
+                )
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            context.startActivity(intent)
+            "Открыл установку APK: " + source.name
+        }.getOrElse {
+            "Не удалось открыть установку APK: " +
+                (it.message ?: it::class.java.simpleName)
         }
     }
 
