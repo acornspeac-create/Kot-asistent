@@ -124,10 +124,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun requestMaximumRuntimeAccess() {
+        val autoGranted = AccessController.autoGrantRuntimePermissionsIfDeviceOwner(this)
         val missing = AccessController.missingRuntimePermissions(this)
 
         if (missing.isEmpty()) {
-            viewModel.status = "Основные разрешения уже выданы"
+            viewModel.status = if (autoGranted > 0) {
+                "Device Owner: разрешения выданы автоматически"
+            } else {
+                "Основные разрешения уже выданы"
+            }
             return
         }
 
