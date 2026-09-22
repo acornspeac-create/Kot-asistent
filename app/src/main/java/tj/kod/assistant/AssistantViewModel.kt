@@ -227,9 +227,10 @@ class AssistantViewModel(
                         text = clean,
                         history = priorHistory,
                     )
-                }.getOrElse {
+                }.getOrElse { error ->
                     usedOffline = true
-                    offlineAssistant.reply(clean, priorMessages)
+                    val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
+                    "Не удалось подключиться к AI-серверу. Ошибка: " + detail
                 }
             }
 
