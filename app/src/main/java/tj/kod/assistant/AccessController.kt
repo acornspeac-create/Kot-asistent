@@ -137,6 +137,13 @@ object AccessController {
         )
     }
 
+    fun openInstallUnknownApps(activity: Activity) {
+        val uri = Uri.parse("package:" + activity.packageName)
+        activity.startActivity(
+            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, uri)
+        )
+    }
+
     fun openAccessibilitySettings(activity: Activity) {
         activity.startActivity(
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
