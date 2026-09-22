@@ -1,0 +1,13 @@
+{
+  "name": "kot-flasher-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node kot-flasher.mjs serve",
+    "devices": "node kot-flasher.mjs devices"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
