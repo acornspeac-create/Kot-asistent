@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                         viewModel.showFlasher -> {
                             FlasherScreen(
                                 viewModel = viewModel,
-                                onBack = { viewModel.showFlasher = false },
+                                onBack = viewModel::closeTask,
                             )
                         }
 
@@ -94,18 +95,31 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                                 onAppSettings = {
                                     AccessController.openAppSettings(this)
                                 },
-                                onBack = { viewModel.showAccess = false },
+                                onBack = viewModel::closeTask,
+                            )
+                        }
+
+                        viewModel.selectedTaskId.isBlank() -> {
+                            KotMainMenuScreen(
+                                viewModel = viewModel,
+                                onOpenTask = viewModel::openTask,
                             )
                         }
 
                         else -> {
-                            AssistantScreen(
-                                viewModel = viewModel,
-                                onListen = ::requestVoice,
-                                onSpeak = ::speak,
-                                onOpenAccess = { viewModel.showAccess = true },
-                                onOpenFlasher = { viewModel.showFlasher = true },
-                            )
+                            val task = KotTasks.byId(viewModel.selectedTaskId)
+                            if (task == null) {
+                                viewModel.closeTask()
+                            } else {
+                                KotTaskScreen(
+                                    viewModel = viewModel,
+                                    task = task,
+                                    onBack = viewModel::closeTask,
+                                    onOpenCamera = ::openCamera,
+                                    onListen = ::requestVoice,
+                                    onSpeak = ::speak,
+                                )
+                            }
                         }
                     }
                 }
@@ -139,6 +153,26 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         accessPermissions.launch(missing)
+    }
+
+    private fun openCamera() {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.CAMERA,
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            viewModel.status =
+                "Камера не разрешена. Открой «Максимальный доступ» и выдай права один раз."
+            viewModel.openTask("access")
+            return
+        }
+
+        runCatching {
+            startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+        }.onFailure {
+            viewModel.status = "Не удалось открыть камеру"
+        }
     }
 
     private fun requestVoice() {
