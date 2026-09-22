@@ -41,19 +41,13 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
 
-    private val microphonePermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                startListening()
+    private val accessPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            val missing = AccessController.missingRuntimePermissions(this)
+            viewModel.status = if (missing.isEmpty()) {
+                "Основные разрешения выданы"
             } else {
-                viewModel.status = "Нужен доступ к микрофону"
-            }
-        }
-
-    private val notificationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                viewModel.status = "Автообновления включены"
+                "Выдано не всё. Осталось разрешений: " + missing.size
             }
         }
 
@@ -69,38 +63,51 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         setupSpeechRecognizer()
 
         UpdateScheduler.schedule(applicationContext)
-        requestNotificationPermissionIfNeeded()
 
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    if (viewModel.showFlasher) {
-                        FlasherScreen(
-                            viewModel = viewModel,
-                            onBack = { viewModel.showFlasher = false },
-                        )
-                    } else {
-                        AssistantScreen(
-                            viewModel = viewModel,
-                            onListen = ::requestVoice,
-                            onSpeak = ::speak,
-                            onOpenFlasher = { viewModel.showFlasher = true },
-                        )
+                    when {
+                        viewModel.showFlasher -> {
+                            FlasherScreen(
+                                viewModel = viewModel,
+                                onBack = { viewModel.showFlasher = false },
+                            )
+                        }
+
+                        viewModel.showAccess -> {
+                            AccessScreen(
+                                onRequestRuntimeAccess = ::requestMaximumRuntimeAccess,
+                                onAllFiles = { AccessController.openAllFilesAccess(this) },
+                                onOverlay = { AccessController.openOverlayAccess(this) },
+                                onNotificationAccess = {
+                                    AccessController.openNotificationListenerSettings(this)
+                                },
+                                onAccessibility = {
+                                    AccessController.openAccessibilitySettings(this)
+                                },
+                                onDeviceAdmin = {
+                                    AccessController.openDeviceAdmin(this)
+                                },
+                                onAppSettings = {
+                                    AccessController.openAppSettings(this)
+                                },
+                                onBack = { viewModel.showAccess = false },
+                            )
+                        }
+
+                        else -> {
+                            AssistantScreen(
+                                viewModel = viewModel,
+                                onListen = ::requestVoice,
+                                onSpeak = ::speak,
+                                onOpenAccess = { viewModel.showAccess = true },
+                                onOpenFlasher = { viewModel.showFlasher = true },
+                            )
+                        }
                     }
                 }
             }
-        }
-    }
-
-    private fun requestNotificationPermissionIfNeeded() {
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -116,16 +123,24 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun requestVoice() {
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO,
-        ) == PackageManager.PERMISSION_GRANTED
+    private fun requestMaximumRuntimeAccess() {
+        val missing = AccessController.missingRuntimePermissions(this)
 
-        if (granted) {
+        if (missing.isEmpty()) {
+            viewModel.status = "Основные разрешения уже выданы"
+            return
+        }
+
+        accessPermissions.launch(missing)
+    }
+
+    private fun requestVoice() {
+        if (AccessController.hasMicrophone(this)) {
             startListening()
         } else {
-            microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+            viewModel.status =
+                "Микрофон не разрешён. Открой «Максимальный доступ» и выдай права один раз."
+            viewModel.showAccess = true
         }
     }
 
@@ -216,6 +231,7 @@ private fun AssistantScreen(
     viewModel: AssistantViewModel,
     onListen: () -> Unit,
     onSpeak: (String) -> Unit,
+    onOpenAccess: () -> Unit,
     onOpenFlasher: () -> Unit,
 ) {
     Column(
@@ -261,12 +277,25 @@ private fun AssistantScreen(
             Text("Сохранить AI-сервер")
         }
 
-        Button(
-            onClick = onOpenFlasher,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = !viewModel.busy,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Прошивка Android")
+            Button(
+                onClick = onOpenAccess,
+                modifier = Modifier.weight(1f),
+                enabled = !viewModel.busy,
+            ) {
+                Text("Максимальный доступ")
+            }
+
+            Button(
+                onClick = onOpenFlasher,
+                modifier = Modifier.weight(1f),
+                enabled = !viewModel.busy,
+            ) {
+                Text("Прошивка Android")
+            }
         }
 
         LazyColumn(
@@ -337,6 +366,119 @@ private fun AssistantScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Очистить локальную память")
+        }
+    }
+}
+
+
+@Composable
+private fun AccessScreen(
+    onRequestRuntimeAccess: () -> Unit,
+    onAllFiles: () -> Unit,
+    onOverlay: () -> Unit,
+    onNotificationAccess: () -> Unit,
+    onAccessibility: () -> Unit,
+    onDeviceAdmin: () -> Unit,
+    onAppSettings: () -> Unit,
+    onBack: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Text(
+                text = "Максимальный доступ KOT",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+        }
+
+        item {
+            Text(
+                text = "Выдай доступ один раз здесь. После этого KOT не будет повторно спрашивать обычные разрешения во время каждого действия.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        item {
+            Button(
+                onClick = onRequestRuntimeAccess,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Выдать основные разрешения одним запросом")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onAllFiles,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Доступ ко всем файлам")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onOverlay,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Работа поверх других приложений")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onNotificationAccess,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Доступ к уведомлениям")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onAccessibility,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Управление интерфейсом (Accessibility)")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onDeviceAdmin,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Администратор устройства")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onAppSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Системные настройки доступа KOT")
+            }
+        }
+
+        item {
+            Text(
+                text = "Некоторые специальные права Android всё равно включает только через системный экран. После однократного включения KOT может использовать их без повторного запроса.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        item {
+            Button(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Назад")
+            }
         }
     }
 }
