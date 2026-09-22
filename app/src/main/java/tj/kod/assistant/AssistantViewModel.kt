@@ -65,6 +65,8 @@ class AssistantViewModel(
     var automationStatus by mutableStateOf("")
     var localModelStatus by mutableStateOf("Локальная LLM не установлена")
     var localModelDownloadId by mutableStateOf(-1L)
+    var maxLocalModelStatus by mutableStateOf("Максимальная LLM не установлена")
+    var maxLocalModelDownloadId by mutableStateOf(-1L)
     var imageModelStatus by mutableStateOf("Офлайн-модель фото не установлена")
     var imageModelDownloadId by mutableStateOf(-1L)
     var generatedImagePath by mutableStateOf("")
@@ -174,6 +176,52 @@ class AssistantViewModel(
             localModelDownloadId = start.id
             localModelStatus =
                 "Загрузка Qwen3 1.7B INT4 запущена. Можно выйти из KOT и вернуться позже."
+        }
+    }
+
+    fun downloadMaxTextModel() {
+        val start = runCatching {
+            localModels.startMaxTextModelDownload()
+        }.getOrElse {
+            maxLocalModelStatus =
+                "Не удалось начать загрузку: " +
+                    (it.message ?: it::class.java.simpleName)
+            return
+        }
+
+        offlineTextModelPath = start.path
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+
+        if (start.alreadyReady) {
+            maxLocalModelDownloadId = -1L
+            maxLocalModelStatus = "Qwen3 4B Instruct уже скачана и выбрана"
+            discoverLocalTextModels(selectFirstWhenEmpty = false)
+        } else {
+            maxLocalModelDownloadId = start.id
+            maxLocalModelStatus =
+                "Загрузка Qwen3 4B Instruct INT4 запущена (~2.66 ГБ)"
+        }
+    }
+
+    fun checkMaxTextModelDownload() {
+        maxLocalModelStatus =
+            localModels.downloadStatus(maxLocalModelDownloadId)
+
+        if (localModels.isMaxReady()) {
+            offlineTextModelPath = localModels.maxModelPath()
+            settings.saveOfflineModelPaths(
+                text = offlineTextModelPath,
+                image = offlineImageModelPath,
+                video = offlineVideoModelPath,
+            )
+            discoverLocalTextModels(selectFirstWhenEmpty = false)
+            maxLocalModelStatus =
+                "Максимальная модель выбрана: " +
+                    File(offlineTextModelPath).name
         }
     }
 
