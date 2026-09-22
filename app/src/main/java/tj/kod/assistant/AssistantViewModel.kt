@@ -31,6 +31,7 @@ class AssistantViewModel(
     var flasherConfirmation by mutableStateOf("")
     var selectedFlasherSerial by mutableStateOf("")
     var showFlasher by mutableStateOf(false)
+    var showAccess by mutableStateOf(false)
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
