@@ -113,6 +113,37 @@ class AssistantViewModel(
         flasherStatus = "Выбрано устройство: " + serial
     }
 
+    fun prepareFlashMode() {
+        if (flasherBusy) return
+
+        val serial = selectedFlasherSerial
+        if (serial.isBlank()) {
+            flasherStatus = "Сначала выбери телефон"
+            return
+        }
+
+        viewModelScope.launch {
+            flasherBusy = true
+            flasherStatus = "Перевожу телефон в нужный режим прошивки…"
+
+            runCatching {
+                flasherApi.rebootToFlashMode(
+                    agentUrl = flasherUrl,
+                    agentToken = flasherToken,
+                    serial = serial,
+                )
+            }.onSuccess {
+                flasherStatus =
+                    it + " Подожди несколько секунд и нажми «Найти телефоны»."
+            }.onFailure {
+                flasherStatus =
+                    it.message ?: "Не удалось перейти в режим прошивки"
+            }
+
+            flasherBusy = false
+        }
+    }
+
     fun checkFlashPlan() {
         if (flasherBusy) return
 
