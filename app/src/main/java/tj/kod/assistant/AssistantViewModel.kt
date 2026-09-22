@@ -22,6 +22,7 @@ class AssistantViewModel(
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
+    var serverToken by mutableStateOf(settings.serverToken())
     var busy by mutableStateOf(false)
     var status by mutableStateOf("Готов")
 
@@ -29,13 +30,19 @@ class AssistantViewModel(
         messages.addAll(memory.load())
     }
 
-    fun saveServerUrl() {
-        settings.saveServerUrl(serverUrl)
+    fun saveServerConfig() {
+        settings.saveServerConfig(
+            url = serverUrl,
+            token = serverToken,
+        )
+
         serverUrl = settings.serverUrl()
-        status = if (serverUrl.isBlank()) {
-            "Офлайн-режим"
-        } else {
-            "Адрес сервера сохранён"
+        serverToken = settings.serverToken()
+
+        status = when {
+            serverUrl.isBlank() -> "Офлайн-режим"
+            serverToken.isBlank() -> "Нужен ключ сервера"
+            else -> "Сервер настроен"
         }
     }
 
@@ -56,16 +63,22 @@ class AssistantViewModel(
 
         viewModelScope.launch {
             busy = true
-            status = if (serverUrl.isBlank()) "Офлайн…" else "Думаю…"
 
-            var usedOffline = serverUrl.isBlank()
+            val onlineConfigured =
+                serverUrl.isNotBlank() &&
+                serverToken.isNotBlank()
 
-            val reply = if (serverUrl.isBlank()) {
+            status = if (onlineConfigured) "Думаю…" else "Офлайн…"
+
+            var usedOffline = !onlineConfigured
+
+            val reply = if (!onlineConfigured) {
                 offlineAssistant.reply(clean, priorMessages)
             } else {
                 runCatching {
                     api.ask(
                         serverUrl = serverUrl,
+                        serverToken = serverToken,
                         text = clean,
                         history = priorHistory,
                     )
