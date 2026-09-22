@@ -122,6 +122,57 @@ fun KotTaskScreen(
                 item { CommandBox(viewModel, onSpeak) }
             }
 
+            "voice" -> {
+                item {
+                    Text(
+                        "Непрерывный голос работает, пока KOT открыт. Слово активации можно изменить.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                item {
+                    Button(
+                        onClick = {
+                            viewModel.continuousVoice = !viewModel.continuousVoice
+                            viewModel.saveVoiceMode()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (viewModel.continuousVoice) {
+                                "✓ Непрерывный голос включён"
+                            } else {
+                                "Включить непрерывный голос"
+                            }
+                        )
+                    }
+                }
+                item {
+                    OutlinedTextField(
+                        value = viewModel.wakeWord,
+                        onValueChange = { viewModel.wakeWord = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Слово активации") },
+                        singleLine = true,
+                    )
+                }
+                item {
+                    Button(
+                        onClick = viewModel::saveVoiceMode,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Сохранить голосовой режим")
+                    }
+                }
+                item {
+                    Button(
+                        onClick = onListen,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Начать слушать")
+                    }
+                }
+            }
+
             "camera" -> {
                 item {
                     Button(
@@ -207,12 +258,65 @@ fun KotTaskScreen(
                 item { CommandBox(viewModel, onSpeak, "Опиши сценарий") }
             }
 
+            "autopilot" -> {
+                item {
+                    Text(
+                        "Локальный «Сделай сам»: перечисли несколько действий через точку с запятой. Например: «домой; открой Telegram».",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                item {
+                    CommandBox(
+                        viewModel,
+                        onSpeak,
+                        "Действия через ;",
+                    )
+                }
+            }
+
             "models" -> {
                 item { OfflineModelsSection(viewModel) }
             }
 
             "profiles" -> {
                 item { ProfilesSection(viewModel) }
+            }
+
+            "vault" -> {
+                item {
+                    Text(
+                        "Данные этого раздела шифруются ключом Android Keystore и хранятся локально.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = viewModel.vaultText,
+                        onValueChange = { viewModel.vaultText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Приватные заметки KOT") },
+                        minLines = 5,
+                    )
+                }
+                item {
+                    Button(
+                        onClick = viewModel::saveVault,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Зашифровать и сохранить")
+                    }
+                }
+                item {
+                    Button(
+                        onClick = viewModel::clearVault,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Очистить приватную папку")
+                    }
+                }
+                if (viewModel.vaultStatus.isNotBlank()) {
+                    item { Text(viewModel.vaultStatus) }
+                }
             }
 
             "backup" -> {
