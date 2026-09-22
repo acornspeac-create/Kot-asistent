@@ -14,7 +14,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "tj.kod.assistant"
+        applicationId = "tj.kot.assistant"
         minSdk = 26
         targetSdk = 35
         versionCode = ciRunNumber
@@ -29,6 +29,8 @@ android {
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 
