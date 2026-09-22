@@ -23,6 +23,7 @@ class AssistantViewModel(
     private val profilesStore = ProfileStore(context)
     private val backupManager = BackupManager(context, settings, profilesStore)
     private val vaultStore = VaultStore(context)
+    private val automationStore = AutomationStore(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
@@ -53,6 +54,8 @@ class AssistantViewModel(
     var wakeWord by mutableStateOf(settings.wakeWord())
     var vaultText by mutableStateOf(vaultStore.loadText())
     var vaultStatus by mutableStateOf("")
+    var automationText by mutableStateOf(automationStore.dailyText())
+    var automationStatus by mutableStateOf("")
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -155,6 +158,23 @@ class AssistantViewModel(
         vaultStore.clear()
         vaultText = ""
         vaultStatus = "Приватная папка очищена"
+    }
+
+    fun saveDailyAutomation() {
+        val clean = automationText.trim()
+        if (clean.isBlank()) {
+            automationStatus = "Напиши текст ежедневного сценария"
+            return
+        }
+
+        automationStore.saveDailyText(clean)
+        AutomationScheduler.scheduleDaily(appContext)
+        automationStatus = "Ежедневный сценарий сохранён"
+    }
+
+    fun disableDailyAutomation() {
+        AutomationScheduler.cancelDaily(appContext)
+        automationStatus = "Ежедневный сценарий выключен"
     }
 
     fun saveServerConfig() {
