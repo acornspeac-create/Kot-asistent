@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.KOT_FLASHER_PORT || 8791);
+const host = String(process.env.KOT_FLASHER_HOST || "127.0.0.1");
 const token = String(process.env.KOT_FLASHER_TOKEN || "");
 const adb = process.env.ADB_PATH || "adb";
 const fastboot = process.env.FASTBOOT_PATH || "fastboot";
@@ -96,7 +97,7 @@ function fastbootVar(serial, key) {
   const r = run(fastboot, ["-s", serial, "getvar", key]);
   const all = [r.stdout, r.stderr].filter(Boolean).join("\n");
   const escaped = key.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-  const m = all.match(new RegExp("(?:^|\\n)\\s*" + escaped + "\\s*:\\s*([^\\r\\n]+)", "i"));
+  const m = all.match(new RegExp("(?:^|\\n)\\s*(?:\\(bootloader\\)\\s*)?" + escaped + "\\s*:\\s*([^\\r\\n]+)", "i"));
   return m ? m[1].trim() : "";
 }
 
@@ -425,9 +426,9 @@ function startServer() {
     }
   });
 
-  server.listen(port, "127.0.0.1", () => {
+  server.listen(port, host, () => {
     console.log(
-      "KOT Flasher Agent listening on http://127.0.0.1:" + port
+      "KOT Flasher Agent listening on http://" + host + ":" + port
     );
     console.log("ADB:", adb, "Fastboot:", fastboot);
 
