@@ -1,33 +1,30 @@
 # KOT Flasher Agent
 
-Локальный модуль KOT Assistant для безопасной автоматизации прошивки Android-устройств через ADB/Fastboot.
+Локальный модуль KOT Assistant для автоматической прошивки Android-устройств через ADB, Fastboot и Samsung Download Mode.
 
-## Почему локальный агент
+## Что умеет v0.2
 
-Railway и другой облачный backend не видят USB-порты вашего компьютера. Поэтому прошивка выполняется только локально на ПК, к которому телефон подключён USB-кабелем.
-
-## Возможности v0.1
-
-- поиск устройств через ADB и Fastboot;
-- определение модели, product/device, fingerprint, Android и батареи в ADB;
-- чтение product/current-slot/unlocked в Fastboot;
-- проверка образов и SHA-256;
-- проверка совпадения product с прошивочным манифестом;
+- поиск устройств через ADB, Fastboot и Heimdall;
+- определение производителя, модели, product/device, Android и батареи;
+- автоматический выбор драйвера;
+- Samsung → Download Mode + Heimdall;
+- Xiaomi/Redmi/POCO, Pixel/Google, OnePlus, Motorola, OPPO, realme, vivo/iQOO, Nothing, Sony, Huawei/Honor и другие совместимые устройства → Fastboot;
+- автоматический переход из ADB в нужный режим прошивки;
+- проверка SHA-256 образов;
+- проверка vendor/product/model из manifest;
 - dry-run план без записи;
-- автоматическая последовательная прошивка разделов через Fastboot;
-- опциональный wipe и reboot;
-- локальный HTTP API для будущего управления из KOT Assistant.
-
-## Ограничения безопасности
-
-KOT Flasher не выполняет обход FRP, OEM/account lock и не разблокирует bootloader скрытыми методами. Если производитель требует официальную процедуру разблокировки, её нужно пройти отдельно. На многих устройствах разблокировка bootloader стирает пользовательские данные.
+- прошивка разделов и reboot;
+- Fastboot wipe, если он явно включён в manifest.
 
 ## Подготовка
 
-1. Установите Node.js 20+.
-2. Установите Android Platform Tools, чтобы команды `adb` и `fastboot` были доступны в PATH.
-3. Подключите телефон хорошим USB-кабелем.
-4. Для ADB включите USB debugging и подтвердите RSA-ключ на телефоне.
+Установите:
+
+1. Node.js 20+.
+2. Android Platform Tools (`adb` и `fastboot`).
+3. Для Samsung — Heimdall, доступный как команда `heimdall`.
+
+Подключите телефон USB-кабелем. Для определения модели в обычном Android включите USB debugging и один раз подтвердите RSA-ключ компьютера.
 
 ## Команды
 
@@ -39,13 +36,19 @@ node kot-flasher.mjs plan SERIAL ./firmware.example.json
 node kot-flasher.mjs flash SERIAL ./firmware.example.json --execute
 ```
 
-Сначала всегда запускайте `plan`. Реальная запись начинается только с `--execute`.
+## Автоматический выбор режима
+
+Если телефон ещё загружен в Android, API `POST /reboot` с `target: "flash"` автоматически выбирает:
+
+- Samsung → `adb reboot download`;
+- остальные поддерживаемые Fastboot-устройства → `adb reboot bootloader`.
+
+Для Samsung KOT сначала запоминает модель и product через ADB, затем после перехода в Download Mode использует эти данные для проверки manifest.
 
 ## Локальный API
 
-Перед запуском задайте длинный случайный токен.
-
 Linux/macOS:
+
 ```bash
 export KOT_FLASHER_TOKEN="change-me-to-a-long-random-token"
 export KOT_FLASHER_HOST="0.0.0.0"
@@ -53,23 +56,28 @@ npm start
 ```
 
 Windows PowerShell:
+
 ```powershell
 $env:KOT_FLASHER_TOKEN="change-me-to-a-long-random-token"
 $env:KOT_FLASHER_HOST="0.0.0.0"
 npm start
 ```
 
-По умолчанию агент слушает только `127.0.0.1:8791`. Чтобы управлять им из KOT Assistant на другом телефоне в той же Wi‑Fi сети, запустите агент с `KOT_FLASHER_HOST=0.0.0.0` и обязательно используйте длинный `KOT_FLASHER_TOKEN`.
+По умолчанию агент слушает `127.0.0.1:8791`. Для управления с телефона в той же Wi‑Fi сети задайте `KOT_FLASHER_HOST=0.0.0.0`.
 
 Endpoints:
-- `GET /health` — проверка агента и наличие ADB/Fastboot.
-- `GET /devices` — список устройств (Bearer token).
-- `POST /inspect` — сведения об устройстве.
-- `POST /reboot` — перезагрузка в system/bootloader/recovery.
-- `POST /flash` — dry-run или прошивка по манифесту.
 
-Для реальной прошивки HTTP-запрос должен содержать `execute: true` и строку подтверждения `FLASH SERIAL`.
+- `GET /health` — состояние агента и установленных драйверов;
+- `GET /drivers` — список доступных драйверов;
+- `GET /devices` — найденные устройства;
+- `POST /inspect` — подробные сведения об устройстве;
+- `POST /reboot` — system/recovery/bootloader/download/flash;
+- `POST /flash` — dry-run или реальная прошивка.
 
-## Поддержка производителей
+Реальная прошивка по HTTP требует `execute: true` и подтверждение `FLASH SERIAL`.
 
-v0.1 реально работает с устройствами, использующими стандартный Fastboot и официально разблокированный загрузчик. Samsung/Odin и другие vendor-specific протоколы будут отдельными драйверами, чтобы не смешивать несовместимые способы прошивки.
+## Ограничения
+
+KOT не обходит FRP, аккаунт-блокировки и OEM-защиту загрузчика. Если конкретная модель требует официальной разблокировки bootloader, она должна быть выполнена штатным способом производителя.
+
+Samsung-прошивка через Heimdall выполняется только если KOT успел определить модель/product через ADB до перехода в Download Mode.
