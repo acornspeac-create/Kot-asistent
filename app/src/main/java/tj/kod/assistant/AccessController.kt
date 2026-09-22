@@ -59,6 +59,40 @@ object AccessController {
             }
             .toTypedArray()
 
+    fun isDeviceOwner(context: Context): Boolean {
+        val dpm = context.getSystemService(DevicePolicyManager::class.java)
+        return dpm?.isDeviceOwnerApp(context.packageName) == true
+    }
+
+    fun autoGrantRuntimePermissionsIfDeviceOwner(context: Context): Int {
+        val dpm = context.getSystemService(DevicePolicyManager::class.java)
+            ?: return 0
+
+        if (!dpm.isDeviceOwnerApp(context.packageName)) return 0
+
+        val admin = ComponentName(
+            context,
+            KotDeviceAdminReceiver::class.java,
+        )
+
+        var granted = 0
+
+        for (permission in runtimePermissions()) {
+            val ok = runCatching {
+                dpm.setPermissionGrantState(
+                    admin,
+                    context.packageName,
+                    permission,
+                    DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
+                )
+            }.getOrDefault(false)
+
+            if (ok) granted += 1
+        }
+
+        return granted
+    }
+
     fun hasMicrophone(context: Context): Boolean =
         ContextCompat.checkSelfPermission(
             context,
