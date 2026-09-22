@@ -36,11 +36,35 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import java.util.Locale
+import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private lateinit var viewModel: AssistantViewModel
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
+
+    private val shizukuPermissionListener =
+        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+            if (requestCode == SHIZUKU_REQUEST_CODE) {
+                viewModel.status = if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                    "Shizuku подключён к KOT"
+                } else {
+                    "Доступ Shizuku для KOT не выдан"
+                }
+            }
+        }
+
+    private val shizukuBinderReceivedListener =
+        Shizuku.OnBinderReceivedListener {
+            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                viewModel.status = "Shizuku подключён к KOT"
+            }
+        }
+
+    private val shizukuBinderDeadListener =
+        Shizuku.OnBinderDeadListener {
+            viewModel.status = "Shizuku остановлен"
+        }
 
     private val accessPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -64,6 +88,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         setupSpeechRecognizer()
 
         UpdateScheduler.schedule(applicationContext)
+
+        Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceivedListener)
+        Shizuku.addBinderDeadListener(shizukuBinderDeadListener)
+        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
 
         setContent {
             MaterialTheme {
@@ -93,6 +121,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                                 onDeviceAdmin = {
                                     AccessController.openDeviceAdmin(this)
                                 },
+                                onShizukuAccess = ::requestShizukuAccess,
                                 onAppSettings = {
                                     AccessController.openAppSettings(this)
                                 },
@@ -204,6 +233,28 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         accessPermissions.launch(missing)
+    }
+
+    private fun requestShizukuAccess() {
+        if (!Shizuku.pingBinder()) {
+            viewModel.status =
+                "Shizuku не запущен. Сначала запусти его через беспроводную отладку."
+            return
+        }
+
+        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+            viewModel.status = "Shizuku уже подключён к KOT"
+            return
+        }
+
+        if (Shizuku.shouldShowRequestPermissionRationale()) {
+            viewModel.status =
+                "Shizuku ранее получил отказ. Разреши KOT в приложении Shizuku."
+            return
+        }
+
+        Shizuku.requestPermission(SHIZUKU_REQUEST_CODE)
+        viewModel.status = "Запрашиваю доступ Shizuku…"
     }
 
     private fun openCamera() {
@@ -356,10 +407,18 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        Shizuku.removeBinderReceivedListener(shizukuBinderReceivedListener)
+        Shizuku.removeBinderDeadListener(shizukuBinderDeadListener)
+        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+
         speechRecognizer?.destroy()
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val SHIZUKU_REQUEST_CODE = 701
     }
 }
 
@@ -517,6 +576,7 @@ private fun AccessScreen(
     onNotificationAccess: () -> Unit,
     onAccessibility: () -> Unit,
     onDeviceAdmin: () -> Unit,
+    onShizukuAccess: () -> Unit,
     onAppSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -600,6 +660,15 @@ private fun AccessScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Администратор устройства")
+            }
+        }
+
+        item {
+            Button(
+                onClick = onShizukuAccess,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Подключить Shizuku")
             }
         }
 
