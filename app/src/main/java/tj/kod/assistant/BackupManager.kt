@@ -8,6 +8,7 @@ class BackupManager(
     private val context: Context,
     private val settings: SettingsStore,
     private val profiles: ProfileStore,
+    private val memory: MemoryStore,
 ) {
     fun createBackup(): File {
         val dir = File(context.filesDir, "backups")
@@ -23,6 +24,7 @@ class BackupManager(
             .put("createdAt", System.currentTimeMillis())
             .put("settings", settings.exportJson())
             .put("profiles", profiles.exportJson())
+            .put("memory", memory.exportJson())
 
         file.writeText(json.toString(2))
         return file
