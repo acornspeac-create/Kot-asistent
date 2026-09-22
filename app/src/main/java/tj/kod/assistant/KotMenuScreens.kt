@@ -566,7 +566,7 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    "Qwen3 0.6B INT4 no-think • около 347 МБ • работает через LiteRT-LM на телефоне.",
+                    "Qwen3 1.7B INT4 • около 932 МБ • заметно умнее 0.6B и работает через LiteRT-LM на телефоне.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Button(
@@ -574,7 +574,7 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !viewModel.busy,
                 ) {
-                    Text("Скачать офлайн ИИ")
+                    Text("Скачать умный офлайн ИИ")
                 }
                 Button(
                     onClick = viewModel::checkTextModelDownload,
