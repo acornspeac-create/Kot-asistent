@@ -22,6 +22,9 @@ class LocalModelManager(
     fun recommendedModelPath(): String =
         recommendedFile().absolutePath
 
+    fun maxModelPath(): String =
+        maxFile().absolutePath
+
     fun startRecommendedTextModelDownload(): ModelDownloadStart {
         val target = recommendedFile()
         target.parentFile?.mkdirs()
@@ -64,6 +67,46 @@ class LocalModelManager(
         )
     }
 
+    fun startMaxTextModelDownload(): ModelDownloadStart {
+        val target = maxFile()
+        target.parentFile?.mkdirs()
+
+        if (target.exists() && target.length() > MAX_READY_BYTES) {
+            return ModelDownloadStart(
+                id = -1L,
+                path = target.absolutePath,
+                alreadyReady = true,
+            )
+        }
+
+        if (target.exists()) {
+            target.delete()
+        }
+
+        val request = DownloadManager.Request(
+            Uri.parse(MAX_MODEL_URL)
+        )
+            .setTitle("KOT Max Offline AI")
+            .setDescription("Qwen3 4B Instruct INT4 • максимальный локальный интеллект")
+            .setMimeType("application/octet-stream")
+            .setAllowedOverMetered(true)
+            .setAllowedOverRoaming(false)
+            .setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            )
+            .setDestinationInExternalFilesDir(
+                context,
+                Environment.DIRECTORY_DOWNLOADS,
+                MAX_FILE_NAME,
+            )
+
+        return ModelDownloadStart(
+            id = downloadManager.enqueue(request),
+            path = target.absolutePath,
+            alreadyReady = false,
+        )
+    }
+
     fun downloadStatus(downloadId: Long): String {
         if (downloadId < 0L) {
             return if (recommendedFile().exists()) {
@@ -87,6 +130,10 @@ class LocalModelManager(
     fun isRecommendedReady(): Boolean =
         recommendedFile().exists() &&
             recommendedFile().length() > MIN_READY_BYTES
+
+    fun isMaxReady(): Boolean =
+        maxFile().exists() &&
+            maxFile().length() > MAX_READY_BYTES
 
     fun discoverTextModels(): List<String> {
         val roots = buildList<File> {
@@ -131,12 +178,19 @@ class LocalModelManager(
     }
 
     private fun recommendedFile(): File {
-        val dir = context.getExternalFilesDir(
-            Environment.DIRECTORY_DOWNLOADS
-        ) ?: File(context.filesDir, "models")
-
+        val dir = modelDirectory()
         return File(dir, RECOMMENDED_FILE_NAME)
     }
+
+    private fun maxFile(): File {
+        val dir = modelDirectory()
+        return File(dir, MAX_FILE_NAME)
+    }
+
+    private fun modelDirectory(): File =
+        context.getExternalFilesDir(
+            Environment.DIRECTORY_DOWNLOADS
+        ) ?: File(context.filesDir, "models")
 
     private fun statusFromCursor(cursor: Cursor): String {
         val status = cursor.getInt(
@@ -187,7 +241,16 @@ class LocalModelManager(
                 RECOMMENDED_FILE_NAME +
                 "?download=true"
 
+        const val MAX_FILE_NAME =
+            "qwen3_4b_instruct_2507_mixed_int4.litertlm"
+
+        const val MAX_MODEL_URL =
+            "https://huggingface.co/litert-community/Qwen3-4B-Instruct-2507/resolve/main/" +
+                MAX_FILE_NAME +
+                "?download=true"
+
         private const val MIN_READY_BYTES = 800L * 1024L * 1024L
+        private const val MAX_READY_BYTES = 2_200L * 1024L * 1024L
         private const val MAX_SCAN_FILES = 2_000
     }
 }
