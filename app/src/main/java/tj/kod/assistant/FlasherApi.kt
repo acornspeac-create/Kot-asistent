@@ -13,6 +13,9 @@ data class FlasherDevice(
     val state: String,
     val model: String,
     val product: String,
+    val vendor: String,
+    val driver: String,
+    val flashMode: String,
 )
 
 class FlasherApi {
@@ -38,9 +41,37 @@ class FlasherApi {
                         state = item.optString("state"),
                         model = item.optString("model"),
                         product = item.optString("product"),
+                        vendor = item.optString("vendor"),
+                        driver = item.optString("driver"),
+                        flashMode = item.optString("flashMode"),
                     )
                 )
             }
+        }
+    }
+
+    suspend fun rebootToFlashMode(
+        agentUrl: String,
+        agentToken: String,
+        serial: String,
+    ): String = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("serial", serial)
+            .put("target", "flash")
+
+        val raw = request(
+            agentUrl = agentUrl,
+            agentToken = agentToken,
+            method = "POST",
+            path = "/reboot",
+            payload = payload,
+        )
+
+        val json = JSONObject(raw)
+        if (json.optBoolean("ok")) {
+            "Телефон переведён в режим прошивки."
+        } else {
+            json.optString("error").ifBlank { raw }
         }
     }
 
