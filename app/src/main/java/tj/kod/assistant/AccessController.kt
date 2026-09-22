@@ -75,6 +75,13 @@ object AccessController {
             KotDeviceAdminReceiver::class.java,
         )
 
+        runCatching {
+            dpm.setPermissionPolicy(
+                admin,
+                DevicePolicyManager.PERMISSION_POLICY_AUTO_GRANT,
+            )
+        }
+
         var granted = 0
 
         for (permission in runtimePermissions()) {
