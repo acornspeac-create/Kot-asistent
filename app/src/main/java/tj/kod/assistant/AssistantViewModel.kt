@@ -13,15 +13,19 @@ import kotlinx.coroutines.launch
 class AssistantViewModel(
     context: Context,
 ) : ViewModel() {
+    private val appContext = context.applicationContext
     private val memory = MemoryStore(context)
     private val settings = SettingsStore(context)
     private val api = AssistantApi()
     private val flasherApi = FlasherApi()
     private val offlineAssistant = OfflineAssistant()
     private val ownerActions = OwnerActionExecutor(context)
+    private val profilesStore = ProfileStore(context)
+    private val backupManager = BackupManager(context, settings, profilesStore)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
+    val profiles = mutableStateListOf<KotProfile>()
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
@@ -33,6 +37,17 @@ class AssistantViewModel(
     var selectedFlasherSerial by mutableStateOf("")
     var showFlasher by mutableStateOf(false)
     var showAccess by mutableStateOf(false)
+    var selectedTaskId by mutableStateOf("")
+    var selectedTaskMode by mutableStateOf(ConnectionMode.AUTO)
+    var personaMode by mutableStateOf(settings.personaMode())
+    var accent by mutableStateOf(settings.accent())
+    var humorLevel by mutableStateOf(settings.humorLevel())
+    var newProfileName by mutableStateOf("")
+    var activeProfileId by mutableStateOf(profilesStore.activeProfileId())
+    var offlineTextModelPath by mutableStateOf(settings.offlineTextModelPath())
+    var offlineImageModelPath by mutableStateOf(settings.offlineImageModelPath())
+    var offlineVideoModelPath by mutableStateOf(settings.offlineVideoModelPath())
+    var backupStatus by mutableStateOf("")
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -40,6 +55,74 @@ class AssistantViewModel(
 
     init {
         messages.addAll(memory.load())
+        profiles.addAll(profilesStore.profiles())
+    }
+
+    fun openTask(taskId: String) {
+        selectedTaskId = taskId
+        selectedTaskMode = settings.taskMode(taskId)
+
+        when (taskId) {
+            "flasher" -> showFlasher = true
+            "access" -> showAccess = true
+        }
+    }
+
+    fun closeTask() {
+        selectedTaskId = ""
+        showFlasher = false
+        showAccess = false
+    }
+
+    fun setTaskMode(mode: ConnectionMode) {
+        val taskId = selectedTaskId.ifBlank { "chat" }
+        selectedTaskMode = mode
+        settings.saveTaskMode(taskId, mode)
+        status = "Режим «" + mode.label + "» сохранён для " +
+            (KotTasks.byId(taskId)?.title ?: taskId)
+    }
+
+    fun setPersona(mode: PersonaMode) {
+        personaMode = mode
+        settings.savePersonaMode(mode)
+    }
+
+    fun saveCompanionStyle() {
+        settings.saveAccent(accent)
+        settings.saveHumorLevel(humorLevel)
+        status = "Стиль общения сохранён"
+    }
+
+    fun addProfile() {
+        val profile = profilesStore.addProfile(newProfileName)
+        profiles.add(profile)
+        newProfileName = ""
+        selectProfile(profile.id)
+    }
+
+    fun selectProfile(id: String) {
+        activeProfileId = id
+        profilesStore.setActiveProfile(id)
+        status = "Активный профиль: " +
+            (profiles.firstOrNull { it.id == id }?.name ?: id)
+    }
+
+    fun saveOfflineModels() {
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        status = "Пути офлайн-моделей сохранены"
+    }
+
+    fun createBackup() {
+        backupStatus = runCatching {
+            backupManager.createBackup().absolutePath
+        }.fold(
+            onSuccess = { "Резервная копия создана: " + it },
+            onFailure = { "Ошибка резервной копии: " + (it.message ?: "неизвестно") },
+        )
     }
 
     fun saveServerConfig() {
