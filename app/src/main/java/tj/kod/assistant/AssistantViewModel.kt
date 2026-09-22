@@ -161,12 +161,12 @@ class AssistantViewModel(
 
         if (start.alreadyReady) {
             localModelDownloadId = -1L
-            localModelStatus = "Qwen3 0.6B уже скачана и готова"
+            localModelStatus = "Qwen3 1.7B уже скачана и готова"
             discoverLocalTextModels(selectFirstWhenEmpty = false)
         } else {
             localModelDownloadId = start.id
             localModelStatus =
-                "Загрузка Qwen3 0.6B INT4 запущена. Можно выйти из KOT и вернуться позже."
+                "Загрузка Qwen3 1.7B INT4 запущена. Можно выйти из KOT и вернуться позже."
         }
     }
 
@@ -629,8 +629,42 @@ class AssistantViewModel(
                 }
 
                 ConnectionMode.AUTO -> {
-                    if (localReady) {
-                        status = "Авто: пробую офлайн ИИ…"
+                    val preferOnline =
+                        onlineConfigured && shouldPreferOnline(clean)
+
+                    if (preferOnline) {
+                        status = "Авто: усиленный онлайн ИИ…"
+
+                        val onlineAttempt = runCatching {
+                            askOnline()
+                        }
+
+                        if (onlineAttempt.isSuccess) {
+                            reply = onlineAttempt.getOrThrow()
+                        } else if (localReady) {
+                            status = "Авто: онлайн недоступен, использую локальный ИИ…"
+                            usedOffline = true
+                            reply = runCatching {
+                                askLocal()
+                            }.getOrElse {
+                                offlineAssistant.reply(
+                                    clean,
+                                    priorMessages,
+                                    personaMode,
+                                    humorLevel,
+                                )
+                            }
+                        } else {
+                            usedOffline = true
+                            reply = offlineAssistant.reply(
+                                clean,
+                                priorMessages,
+                                personaMode,
+                                humorLevel,
+                            )
+                        }
+                    } else if (localReady) {
+                        status = "Авто: локальный ИИ думает…"
 
                         val localAttempt = runCatching {
                             askLocal()
@@ -640,7 +674,7 @@ class AssistantViewModel(
                             usedOffline = true
                             reply = localAttempt.getOrThrow()
                         } else if (onlineConfigured) {
-                            status = "Авто: офлайн не сработал, подключаю сервер…"
+                            status = "Авто: локальный ИИ недоступен, подключаю онлайн…"
                             reply = runCatching {
                                 askOnline()
                             }.getOrElse {
@@ -676,7 +710,7 @@ class AssistantViewModel(
                         }
                     } else {
                         usedOffline = true
-                        status = "Авто: офлайн…"
+                        status = "Авто: базовый локальный режим"
                         reply = offlineAssistant.reply(
                             clean,
                             priorMessages,
@@ -687,15 +721,103 @@ class AssistantViewModel(
                 }
             }
 
-            val assistantMessage = Message("assistant", reply)
+            val finalReply = improveReply(
+                raw = reply,
+                userText = clean,
+                priorMessages = priorMessages,
+            )
+
+            val assistantMessage = Message("assistant", finalReply)
             messages += assistantMessage
             memory.append(assistantMessage)
 
             busy = false
             status = if (usedOffline) "Офлайн" else "Готов"
-            onReply(reply)
+            onReply(finalReply)
         }
     }
+
+    private fun shouldPreferOnline(text: String): Boolean {
+        if (text.length >= 80) return true
+
+        val lower = text.lowercase()
+        val complexHints = listOf(
+            "найди",
+            "сравни",
+            "объясни",
+            "почему",
+            "как сделать",
+            "как исправить",
+            "проанализ",
+            "рассчитай",
+            "посчитай",
+            "переведи",
+            "напиши код",
+            "ошибк",
+            "новост",
+            "погода",
+            "курс",
+            "цена",
+            "купить",
+            "продать",
+        )
+
+        return complexHints.any(lower::contains)
+    }
+
+    private fun improveReply(
+        raw: String,
+        userText: String,
+        priorMessages: List<Message>,
+    ): String {
+        var candidate = raw.trim()
+
+        val cannedOffline = listOf(
+            "сейчас я офлайн",
+            "сейчас работаю в офлайн-режиме",
+            "для полного ии-ответа нужен",
+            "запрос сохранён",
+            "сообщение запомнил",
+        )
+
+        if (
+            candidate.isBlank() ||
+            cannedOffline.any { candidate.lowercase().contains(it) }
+        ) {
+            candidate = offlineAssistant.reply(
+                userText,
+                priorMessages,
+                personaMode,
+                humorLevel,
+            )
+        }
+
+        val previous = priorMessages
+            .asReversed()
+            .firstOrNull { it.role == "assistant" }
+            ?.text
+            .orEmpty()
+
+        if (
+            previous.isNotBlank() &&
+            normalizeReply(previous) == normalizeReply(candidate)
+        ) {
+            candidate = offlineAssistant.reply(
+                userText,
+                priorMessages + Message("assistant", candidate),
+                personaMode,
+                humorLevel,
+            )
+        }
+
+        return candidate.trim()
+    }
+
+    private fun normalizeReply(value: String): String =
+        value
+            .lowercase()
+            .replace(Regex("""\s+"""), " ")
+            .trim()
 
     private fun buildLocalPrompt(
         userText: String,
@@ -727,32 +849,37 @@ class AssistantViewModel(
                 ?: activeProfileId
 
         return buildString {
-            appendLine("Ты KOT — личный AI-ассистент на телефоне.")
+            appendLine("Ты KOT — умный личный AI-ассистент на телефоне.")
             appendLine("Всегда отвечай на языке пользователя; по умолчанию по-русски.")
+            appendLine("Сначала пойми реальную цель запроса и отвечай прямо по существу.")
+            appendLine("Не повторяй один и тот же ответ и не используй шаблонную фразу два раза подряд.")
+            appendLine("Не говори про онлайн, офлайн, сервер или модель, если пользователь сам об этом не спросил.")
+            appendLine("Используй историю диалога, чтобы понимать короткие продолжения вроде «а это?», «почему?» и «дальше».")
+            appendLine("Для простого разговора отвечай естественно; для сложной задачи давай конкретные шаги и расчёты.")
+            appendLine("Не выдумывай текущие новости, цены, погоду или другие данные, которых у тебя нет.")
             appendLine("Профиль: $profileName.")
             appendLine("Характер: $persona")
             appendLine("Манера речи/акцент: $accent.")
             appendLine("Уровень юмора: $humorLevel из 3.")
             appendLine("Не делай акцент или национальность объектом унижения; юмор строй на ситуации и словах.")
             if (history.isNotBlank()) {
-                appendLine("Краткая история:")
-                appendLine(history.takeLast(6_000))
+                appendLine("История разговора:")
+                appendLine(history.takeLast(7_000))
             }
-            appendLine("Пользователь: $userText")
+            appendLine("Текущий запрос пользователя: $userText")
             append("Ответ KOT:")
         }
     }
 
     private fun buildOnlinePrompt(userText: String): String =
         buildString {
-            append("Стиль KOT: ")
-            append(personaMode.label)
-            append(". Манера/акцент: ")
-            append(accent)
-            append(". Юмор ")
-            append(humorLevel)
-            append("/3. Запрос: ")
-            append(userText)
+            appendLine("Ты KOT — умный личный ассистент.")
+            appendLine("Отвечай прямо на запрос пользователя, без лишних сообщений о режиме работы.")
+            appendLine("Не повторяй предыдущий ответ. Используй переданную историю разговора.")
+            appendLine("Если задача сложная, дай конкретное решение, шаги, расчёты или код.")
+            appendLine("Стиль: " + personaMode.label + ".")
+            appendLine("Манера/акцент: " + accent + ". Юмор: " + humorLevel + "/3.")
+            append("Запрос пользователя: " + userText)
         }
 
     fun clearMemory() {
