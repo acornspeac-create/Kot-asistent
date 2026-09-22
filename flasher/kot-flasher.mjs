@@ -11,6 +11,8 @@ const host = String(process.env.KOT_FLASHER_HOST || "127.0.0.1");
 const token = String(process.env.KOT_FLASHER_TOKEN || "");
 const adb = process.env.ADB_PATH || "adb";
 const fastboot = process.env.FASTBOOT_PATH || "fastboot";
+const heimdall = process.env.HEIMDALL_PATH || "heimdall";
+let rememberedSamsung = null;
 
 function run(bin, args, timeout = 15000) {
   const result = spawnSync(bin, args, {
@@ -61,21 +63,110 @@ function parseFastbootDevices(text) {
     });
 }
 
+function detectVendor(...parts) {
+  const text = parts.filter(Boolean).join(" ").toLowerCase();
+
+  if (/samsung|sm-[a-z0-9]+/i.test(text)) return "samsung";
+  if (/xiaomi|redmi|poco/.test(text)) return "xiaomi";
+  if (/google|pixel/.test(text)) return "google";
+  if (/oneplus/.test(text)) return "oneplus";
+  if (/motorola|moto\s|lenovo/.test(text)) return "motorola";
+  if (/oppo/.test(text)) return "oppo";
+  if (/realme/.test(text)) return "realme";
+  if (/vivo|iqoo/.test(text)) return "vivo";
+  if (/nothing/.test(text)) return "nothing";
+  if (/sony|xperia/.test(text)) return "sony";
+  if (/huawei/.test(text)) return "huawei";
+  if (/honor/.test(text)) return "honor";
+
+  return "unknown";
+}
+
+function routeDevice(device) {
+  const vendor = device.vendor || detectVendor(
+    device.manufacturer,
+    device.model,
+    device.product,
+    device.device,
+  );
+
+  if (device.transport === "heimdall" || vendor === "samsung") {
+    return {
+      ...device,
+      vendor: "samsung",
+      driver: "samsung-heimdall",
+      flashMode: "download",
+    };
+  }
+
+  if (device.transport === "fastboot") {
+    const driver =
+      vendor === "unknown"
+        ? "generic-fastboot"
+        : vendor + "-fastboot";
+
+    return {
+      ...device,
+      vendor,
+      driver,
+      flashMode: "fastboot",
+    };
+  }
+
+  return {
+    ...device,
+    vendor,
+    driver:
+      vendor === "samsung"
+        ? "samsung-heimdall"
+        : vendor === "unknown"
+          ? "generic-fastboot"
+          : vendor + "-fastboot",
+    flashMode: vendor === "samsung" ? "download" : "bootloader",
+  };
+}
+
 function listDevices() {
   const tools = {
     adb: toolAvailable(adb),
     fastboot: toolAvailable(fastboot),
+    heimdall: toolAvailable(heimdall),
   };
   const devices = [];
 
   if (tools.adb) {
     const r = run(adb, ["devices", "-l"]);
-    if (r.ok) devices.push(...parseAdbDevices(r.stdout));
+    if (r.ok) {
+      devices.push(
+        ...parseAdbDevices(r.stdout).map((device) => routeDevice(device))
+      );
+    }
   }
 
   if (tools.fastboot) {
     const r = run(fastboot, ["devices"]);
-    if (r.ok) devices.push(...parseFastbootDevices(r.stdout));
+    if (r.ok) {
+      devices.push(
+        ...parseFastbootDevices(r.stdout).map((device) => routeDevice(device))
+      );
+    }
+  }
+
+  if (tools.heimdall) {
+    const detected = run(heimdall, ["detect"], 8000);
+    if (detected.ok) {
+      devices.push(
+        routeDevice({
+          transport: "heimdall",
+          serial: "SAMSUNG-DOWNLOAD",
+          state: "download",
+          manufacturer: "Samsung",
+          model: rememberedSamsung?.model || "",
+          product: rememberedSamsung?.product || "",
+          device: rememberedSamsung?.device || "",
+        })
+      );
+    }
   }
 
   return { tools, devices };
@@ -109,7 +200,7 @@ function inspectDevice(serial) {
   if (!device) throw new Error("Device not found: " + serial);
 
   if (device.transport === "adb") {
-    return {
+    const inspected = routeDevice({
       ...device,
       manufacturer: adbProp(serial, "ro.product.manufacturer"),
       model: adbProp(serial, "ro.product.model"),
@@ -118,18 +209,35 @@ function inspectDevice(serial) {
       fingerprint: adbProp(serial, "ro.build.fingerprint"),
       android: adbProp(serial, "ro.build.version.release"),
       battery: adbBattery(serial),
-    };
+    });
+
+    if (inspected.vendor === "samsung") {
+      rememberedSamsung = inspected;
+    }
+
+    return inspected;
+  }
+
+  if (device.transport === "heimdall") {
+    return routeDevice({
+      ...device,
+      manufacturer: "Samsung",
+      model: rememberedSamsung?.model || "",
+      product: rememberedSamsung?.product || "",
+      device: rememberedSamsung?.device || "",
+      rememberedFromAdb: Boolean(rememberedSamsung),
+    });
   }
 
   const unlockedRaw = fastbootVar(serial, "unlocked");
-  return {
+  return routeDevice({
     ...device,
-    product: fastbootVar(serial, "product"),
+    product: fastbootVar(serial, "product") || device.product || "",
     currentSlot: fastbootVar(serial, "current-slot"),
     unlocked: /yes|true|1/i.test(unlockedRaw),
     unlockedRaw,
     secure: fastbootVar(serial, "secure"),
-  };
+  });
 }
 
 function sha256(path) {
