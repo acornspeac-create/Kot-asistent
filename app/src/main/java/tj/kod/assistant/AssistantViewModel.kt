@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import java.io.File
 
 class AssistantViewModel(
     context: Context,
@@ -24,10 +25,13 @@ class AssistantViewModel(
     private val backupManager = BackupManager(context, settings, profilesStore, memory)
     private val vaultStore = VaultStore(context)
     private val automationStore = AutomationStore(context)
+    private val localAi = LocalAiEngine(context)
+    private val localModels = LocalModelManager(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
     val profiles = mutableStateListOf<KotProfile>()
+    val discoveredTextModels = mutableStateListOf<String>()
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
@@ -56,6 +60,8 @@ class AssistantViewModel(
     var vaultStatus by mutableStateOf("")
     var automationText by mutableStateOf(automationStore.dailyText())
     var automationStatus by mutableStateOf("")
+    var localModelStatus by mutableStateOf("Локальная LLM не установлена")
+    var localModelDownloadId by mutableStateOf(-1L)
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -64,6 +70,7 @@ class AssistantViewModel(
     init {
         messages.addAll(memory.load())
         profiles.addAll(profilesStore.profiles())
+        discoverLocalTextModels(selectFirstWhenEmpty = true)
     }
 
     fun taskModeLabel(taskId: String): String =
@@ -124,7 +131,142 @@ class AssistantViewModel(
             image = offlineImageModelPath,
             video = offlineVideoModelPath,
         )
+        localModelStatus = if (
+            offlineTextModelPath.isNotBlank() &&
+            File(offlineTextModelPath).isFile
+        ) {
+            "Текстовая модель выбрана: " + File(offlineTextModelPath).name
+        } else {
+            "Путь текстовой модели сохранён, но файл пока не найден"
+        }
         status = "Пути офлайн-моделей сохранены"
+    }
+
+    fun downloadRecommendedTextModel() {
+        val start = runCatching {
+            localModels.startRecommendedTextModelDownload()
+        }.getOrElse {
+            localModelStatus =
+                "Не удалось начать загрузку: " +
+                    (it.message ?: it::class.java.simpleName)
+            return
+        }
+
+        offlineTextModelPath = start.path
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+
+        if (start.alreadyReady) {
+            localModelDownloadId = -1L
+            localModelStatus = "Qwen3 0.6B уже скачана и готова"
+            discoverLocalTextModels(selectFirstWhenEmpty = false)
+        } else {
+            localModelDownloadId = start.id
+            localModelStatus =
+                "Загрузка Qwen3 0.6B INT4 запущена. Можно выйти из KOT и вернуться позже."
+        }
+    }
+
+    fun checkTextModelDownload() {
+        val downloadState = localModels.downloadStatus(
+            localModelDownloadId
+        )
+
+        localModelStatus = downloadState
+
+        if (localModels.isRecommendedReady()) {
+            offlineTextModelPath = localModels.recommendedModelPath()
+            settings.saveOfflineModelPaths(
+                text = offlineTextModelPath,
+                image = offlineImageModelPath,
+                video = offlineVideoModelPath,
+            )
+            discoverLocalTextModels(selectFirstWhenEmpty = false)
+            localModelStatus =
+                "Модель готова: " + File(offlineTextModelPath).name
+        }
+    }
+
+    fun discoverLocalTextModels(
+        selectFirstWhenEmpty: Boolean = false,
+    ) {
+        val found = localModels.discoverTextModels()
+        discoveredTextModels.clear()
+        discoveredTextModels.addAll(found)
+
+        if (
+            selectFirstWhenEmpty &&
+            offlineTextModelPath.isBlank() &&
+            found.isNotEmpty()
+        ) {
+            offlineTextModelPath = found.first()
+            settings.saveOfflineModelPaths(
+                text = offlineTextModelPath,
+                image = offlineImageModelPath,
+                video = offlineVideoModelPath,
+            )
+        }
+
+        localModelStatus = when {
+            offlineTextModelPath.isNotBlank() &&
+                File(offlineTextModelPath).isFile ->
+                "Готова: " + File(offlineTextModelPath).name
+
+            found.isNotEmpty() ->
+                "Найдено локальных моделей: " + found.size
+
+            else ->
+                "Локальная LLM не найдена. Скачай рекомендуемую модель."
+        }
+    }
+
+    fun selectLocalTextModel(path: String) {
+        offlineTextModelPath = path
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        localModelStatus = "Выбрана: " + File(path).name
+    }
+
+    fun testLocalTextModel() {
+        if (busy) return
+
+        val modelPath = offlineTextModelPath.trim()
+        if (modelPath.isBlank() || !File(modelPath).isFile) {
+            localModelStatus =
+                "Сначала скачай или выбери .litertlm модель"
+            return
+        }
+
+        viewModelScope.launch {
+            busy = true
+            localModelStatus = "Запускаю локальную модель…"
+
+            runCatching {
+                localAi.reply(
+                    modelPath = modelPath,
+                    prompt = buildLocalPrompt(
+                        userText = "Ответь одной короткой фразой: офлайн ИИ KOT работает.",
+                        history = "",
+                    ),
+                )
+            }.onSuccess { result ->
+                localModelStatus =
+                    "Офлайн ИИ работает • " + result.backend +
+                        " • ответ: " + result.text.take(140)
+            }.onFailure {
+                localModelStatus =
+                    "Ошибка локального ИИ: " +
+                        (it.message ?: it::class.java.simpleName)
+            }
+
+            busy = false
+        }
     }
 
     fun createBackup() {
@@ -397,28 +539,151 @@ class AssistantViewModel(
         viewModelScope.launch {
             busy = true
 
+            val taskId = selectedTaskId.ifBlank { "chat" }
+            val mode = settings.taskMode(taskId)
+            selectedTaskMode = mode
+
             val onlineConfigured =
                 serverUrl.isNotBlank() &&
-                serverToken.isNotBlank()
+                    serverToken.isNotBlank()
 
-            status = if (onlineConfigured) "Думаю…" else "Офлайн…"
+            val localReady =
+                offlineTextModelPath.isNotBlank() &&
+                    File(offlineTextModelPath).isFile
 
-            var usedOffline = !onlineConfigured
-
-            val reply = if (!onlineConfigured) {
-                offlineAssistant.reply(clean, priorMessages, personaMode, humorLevel)
-            } else {
-                runCatching {
-                    api.ask(
-                        serverUrl = serverUrl,
-                        serverToken = serverToken,
-                        text = clean,
-                        history = priorHistory,
+            suspend fun askLocal(): String {
+                if (!localReady) {
+                    return offlineAssistant.reply(
+                        clean,
+                        priorMessages,
+                        personaMode,
+                        humorLevel,
                     )
-                }.getOrElse { error ->
+                }
+
+                val result = localAi.reply(
+                    modelPath = offlineTextModelPath,
+                    prompt = buildLocalPrompt(
+                        userText = clean,
+                        history = priorHistory,
+                    ),
+                )
+
+                localModelStatus =
+                    "Офлайн ИИ • " + result.backend +
+                        " • " + File(offlineTextModelPath).name
+
+                return result.text
+            }
+
+            suspend fun askOnline(): String {
+                if (!onlineConfigured) {
+                    error("AI-сервер не настроен")
+                }
+
+                return api.ask(
+                    serverUrl = serverUrl,
+                    serverToken = serverToken,
+                    text = buildOnlinePrompt(clean),
+                    history = priorHistory,
+                )
+            }
+
+            val reply: String
+            var usedOffline = false
+
+            when (mode) {
+                ConnectionMode.OFFLINE -> {
                     usedOffline = true
-                    val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
-                    "Не удалось подключиться к AI-серверу. Ошибка: " + detail
+                    status = if (localReady) {
+                        "Офлайн ИИ думает…"
+                    } else {
+                        "Офлайн без LLM…"
+                    }
+
+                    reply = runCatching {
+                        askLocal()
+                    }.getOrElse { error ->
+                        localModelStatus =
+                            "Ошибка локальной модели: " +
+                                (error.message ?: error::class.java.simpleName)
+
+                        offlineAssistant.reply(
+                            clean,
+                            priorMessages,
+                            personaMode,
+                            humorLevel,
+                        )
+                    }
+                }
+
+                ConnectionMode.ONLINE -> {
+                    status = "Онлайн…"
+
+                    reply = runCatching {
+                        askOnline()
+                    }.getOrElse { error ->
+                        "Не удалось выполнить запрос онлайн: " +
+                            (error.message ?: error::class.java.simpleName)
+                    }
+                }
+
+                ConnectionMode.AUTO -> {
+                    if (localReady) {
+                        status = "Авто: пробую офлайн ИИ…"
+
+                        val localAttempt = runCatching {
+                            askLocal()
+                        }
+
+                        if (localAttempt.isSuccess) {
+                            usedOffline = true
+                            reply = localAttempt.getOrThrow()
+                        } else if (onlineConfigured) {
+                            status = "Авто: офлайн не сработал, подключаю сервер…"
+                            reply = runCatching {
+                                askOnline()
+                            }.getOrElse {
+                                usedOffline = true
+                                offlineAssistant.reply(
+                                    clean,
+                                    priorMessages,
+                                    personaMode,
+                                    humorLevel,
+                                )
+                            }
+                        } else {
+                            usedOffline = true
+                            reply = offlineAssistant.reply(
+                                clean,
+                                priorMessages,
+                                personaMode,
+                                humorLevel,
+                            )
+                        }
+                    } else if (onlineConfigured) {
+                        status = "Авто: онлайн…"
+                        reply = runCatching {
+                            askOnline()
+                        }.getOrElse {
+                            usedOffline = true
+                            offlineAssistant.reply(
+                                clean,
+                                priorMessages,
+                                personaMode,
+                                humorLevel,
+                            )
+                        }
+                    } else {
+                        usedOffline = true
+                        status = "Авто: офлайн…"
+                        reply = offlineAssistant.reply(
+                            clean,
+                            priorMessages,
+                            personaMode,
+                            humorLevel,
+                        )
+                    }
                 }
             }
 
@@ -432,10 +697,73 @@ class AssistantViewModel(
         }
     }
 
+    private fun buildLocalPrompt(
+        userText: String,
+        history: String,
+    ): String {
+        val persona = when (personaMode) {
+            PersonaMode.NORMAL ->
+                "Обычный полезный личный ассистент."
+            PersonaMode.FUNNY_FRIEND ->
+                "Очень смешной дружелюбный друг. Шути живо, но не унижай людей и национальности."
+            PersonaMode.FUNNY_GIRLFRIEND ->
+                "Очень смешная дружелюбная подруга. Будь тёплой, энергичной и остроумной."
+            PersonaMode.ADULT_COMPANION ->
+                "Взрослая флиртующая виртуальная собеседница. Только вымышленная взрослая персона."
+            PersonaMode.BUSINESS ->
+                "Деловой помощник: кратко, конкретно, по делу."
+            PersonaMode.TEACHER ->
+                "Терпеливый преподаватель, объясняющий понятно."
+            PersonaMode.MECHANIC ->
+                "Практичный автомеханик и технический помощник."
+            PersonaMode.BUILDER ->
+                "Практичный строитель и помощник по ремонту."
+            PersonaMode.PROGRAMMER ->
+                "Сильный программист и инженер."
+        }
+
+        val profileName =
+            profiles.firstOrNull { it.id == activeProfileId }?.name
+                ?: activeProfileId
+
+        return buildString {
+            appendLine("Ты KOT — личный AI-ассистент на телефоне.")
+            appendLine("Всегда отвечай на языке пользователя; по умолчанию по-русски.")
+            appendLine("Профиль: $profileName.")
+            appendLine("Характер: $persona")
+            appendLine("Манера речи/акцент: $accent.")
+            appendLine("Уровень юмора: $humorLevel из 3.")
+            appendLine("Не делай акцент или национальность объектом унижения; юмор строй на ситуации и словах.")
+            if (history.isNotBlank()) {
+                appendLine("Краткая история:")
+                appendLine(history.takeLast(6_000))
+            }
+            appendLine("Пользователь: $userText")
+            append("Ответ KOT:")
+        }
+    }
+
+    private fun buildOnlinePrompt(userText: String): String =
+        buildString {
+            append("Стиль KOT: ")
+            append(personaMode.label)
+            append(". Манера/акцент: ")
+            append(accent)
+            append(". Юмор ")
+            append(humorLevel)
+            append("/3. Запрос: ")
+            append(userText)
+        }
+
     fun clearMemory() {
         memory.clear()
         messages.clear()
         status = "Локальная память очищена"
+    }
+
+    override fun onCleared() {
+        localAi.close()
+        super.onCleared()
     }
 
     class Factory(

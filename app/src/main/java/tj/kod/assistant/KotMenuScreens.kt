@@ -551,32 +551,97 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
             style = MaterialTheme.typography.titleMedium,
         )
 
+        Text(
+            text = viewModel.localModelStatus,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "Рекомендуемая модель",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    "Qwen3 0.6B INT4 no-think • около 347 МБ • работает через LiteRT-LM на телефоне.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = viewModel::downloadRecommendedTextModel,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Скачать офлайн ИИ")
+                }
+                Button(
+                    onClick = viewModel::checkTextModelDownload,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Проверить загрузку")
+                }
+            }
+        }
+
+        Button(
+            onClick = { viewModel.discoverLocalTextModels() },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.busy,
+        ) {
+            Text("Найти .litertlm на телефоне")
+        }
+
+        viewModel.discoveredTextModels.forEach { path ->
+            Button(
+                onClick = { viewModel.selectLocalTextModel(path) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.busy,
+            ) {
+                val selected = path == viewModel.offlineTextModelPath
+                Text(
+                    (if (selected) "✓ " else "") +
+                        java.io.File(path).name
+                )
+            }
+        }
+
         OutlinedTextField(
             value = viewModel.offlineTextModelPath,
             onValueChange = { viewModel.offlineTextModelPath = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Текстовая/голосовая модель") },
+            label = { Text("Путь к текстовой .litertlm модели") },
         )
+
+        Button(
+            onClick = viewModel::testLocalTextModel,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.busy,
+        ) {
+            Text(if (viewModel.busy) "Проверяю…" else "Проверить офлайн ИИ")
+        }
 
         OutlinedTextField(
             value = viewModel.offlineImageModelPath,
             onValueChange = { viewModel.offlineImageModelPath = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Модель генерации фото") },
+            label = { Text("Модель генерации фото (следующий модуль)") },
         )
 
         OutlinedTextField(
             value = viewModel.offlineVideoModelPath,
             onValueChange = { viewModel.offlineVideoModelPath = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Модель генерации видео") },
+            label = { Text("Модель генерации видео (следующий модуль)") },
         )
 
         Button(
             onClick = viewModel::saveOfflineModels,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Сохранить модели")
+            Text("Сохранить пути моделей")
         }
     }
 }
