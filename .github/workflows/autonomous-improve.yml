@@ -1,0 +1,84 @@
+name: Autonomous self improvement
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Let KOT improve itself
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SELF_IMPROVE_MODEL: gpt-5.6-luna
+        run: node automation/self_improve.mjs
+
+      - name: Detect changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate server syntax
+        if: steps.changes.outputs.changed == 'true'
+        run: node --check server/server.mjs
+
+      - name: Build Android app
+        if: steps.changes.outputs.changed == 'true'
+        run: gradle :app:assembleDebug
+
+      - name: Create autonomous improvement branch
+        if: steps.changes.outputs.changed == 'true'
+        id: branch
+        shell: bash
+        run: |
+          BRANCH="autonomous/self-improve-${GITHUB_RUN_ID}"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          git config user.name "KOT Assistant"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add app/src/main/java/tj/kod/assistant README.md
+          git commit -m "KOT autonomous self-improvement"
+          git push origin "$BRANCH"
+
+      - name: Open and merge audited PR
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+        shell: bash
+        run: |
+          PR_URL=$(gh pr create             --base main             --head "$BRANCH"             --title "KOT autonomous self-improvement"             --body "Generated automatically by KOT Assistant. Scope is restricted to whitelisted UI/memory files and was compiled before merge.")
+
+          gh pr merge "$PR_URL" --squash --delete-branch
