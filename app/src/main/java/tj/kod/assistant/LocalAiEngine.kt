@@ -43,17 +43,35 @@ class LocalAiEngine(
             val activeEngine = engine
                 ?: error("Локальный AI-движок не запущен")
 
-            val text = activeEngine.createConversation().use { conversation ->
+            val rawText = activeEngine.createConversation().use { conversation ->
                 conversation.sendMessage(prompt).toString().trim()
             }
 
+            val text = cleanModelOutput(rawText)
+
             LocalAiResult(
                 text = text.ifBlank {
-                    "Локальная модель не вернула текст."
+                    "Локальная модель не вернула полезный текст."
                 },
                 backend = loadedBackend,
             )
         }
+    }
+
+    private fun cleanModelOutput(raw: String): String {
+        var value = raw.trim()
+
+        value = value.replace(
+            Regex("""(?is)<think>.*?</think>"""),
+            "",
+        ).trim()
+
+        value = value
+            .removePrefix("Ответ KOT:")
+            .removePrefix("KOT:")
+            .trim()
+
+        return value
     }
 
     fun loadedStatus(): String {
