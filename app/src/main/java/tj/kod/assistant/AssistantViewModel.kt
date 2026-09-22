@@ -762,7 +762,7 @@ class AssistantViewModel(
             "продать",
         )
 
-        return complexHints.any(lower::contains)
+        return complexHints.any { hint -> lower.contains(hint) }
     }
 
     private fun improveReply(
