@@ -1,11 +1,13 @@
 package tj.kod.assistant
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -30,6 +32,8 @@ class AssistantViewModel(
     private val localModels = LocalModelManager(context)
     private val localImage = LocalImageEngine(context)
     private val localImageModels = LocalImageModelManager(context)
+    private val localVideo = LocalVideoEngine(context)
+    private val localVideoModels = LocalVideoModelManager(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
@@ -71,6 +75,13 @@ class AssistantViewModel(
     var imageModelStatus by mutableStateOf("Офлайн-модель фото не установлена")
     var imageModelDownloadId by mutableStateOf(-1L)
     var generatedImagePath by mutableStateOf("")
+    var videoVaePath by mutableStateOf(settings.videoVaePath())
+    var videoTextEncoderPath by mutableStateOf(settings.videoTextEncoderPath())
+    var videoStatus by mutableStateOf("Офлайн-видео не настроено")
+    var videoDiffusionDownloadId by mutableStateOf(-1L)
+    var videoVaeDownloadId by mutableStateOf(-1L)
+    var videoTextDownloadId by mutableStateOf(-1L)
+    var generatedVideoPath by mutableStateOf("")
     var flasherBusy by mutableStateOf(false)
     var flasherStatus by mutableStateOf("KOT Flasher готов к настройке")
     var busy by mutableStateOf(false)
@@ -81,6 +92,7 @@ class AssistantViewModel(
         profiles.addAll(profilesStore.profiles())
         discoverLocalTextModels(selectFirstWhenEmpty = true)
         discoverLocalImageModels(selectFirstWhenEmpty = true)
+        adoptStarterVideoPackIfReady()
     }
 
     fun taskModeLabel(taskId: String): String =
@@ -154,6 +166,10 @@ class AssistantViewModel(
         } else {
             "Путь текстовой модели сохранён, но файл пока не найден"
         }
+        settings.saveVideoSupportPaths(
+            vae = videoVaePath,
+            textEncoder = videoTextEncoderPath,
+        )
         status = "Пути офлайн-моделей сохранены"
     }
 
@@ -459,6 +475,160 @@ class AssistantViewModel(
             }
 
             busy = false
+        }
+    }
+
+    fun downloadStarterVideoPack() {
+        val pack = runCatching {
+            localVideoModels.startStarterPack()
+        }.getOrElse {
+            videoStatus = "Не удалось запустить загрузку: " +
+                (it.message ?: it::class.java.simpleName)
+            return
+        }
+
+        offlineVideoModelPath = pack.paths.diffusion
+        videoVaePath = pack.paths.vae
+        videoTextEncoderPath = pack.paths.textEncoder
+
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        settings.saveVideoSupportPaths(
+            vae = videoVaePath,
+            textEncoder = videoTextEncoderPath,
+        )
+
+        videoDiffusionDownloadId = pack.diffusionId
+        videoVaeDownloadId = pack.vaeId
+        videoTextDownloadId = pack.textEncoderId
+
+        videoStatus = if (localVideoModels.ready()) {
+            "Видео-комплект уже готов"
+        } else {
+            "Загрузка Wan-комплекта запущена (~4.46 ГБ)"
+        }
+    }
+
+    fun checkVideoPackDownload() {
+        videoStatus = localVideoModels.status(
+            videoDiffusionDownloadId,
+            videoVaeDownloadId,
+            videoTextDownloadId,
+        )
+        adoptStarterVideoPackIfReady()
+    }
+
+    private fun adoptStarterVideoPackIfReady() {
+        if (!localVideoModels.ready()) return
+
+        val paths = localVideoModels.starterPaths()
+        offlineVideoModelPath = paths.diffusion
+        videoVaePath = paths.vae
+        videoTextEncoderPath = paths.textEncoder
+
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        settings.saveVideoSupportPaths(
+            vae = videoVaePath,
+            textEncoder = videoTextEncoderPath,
+        )
+        videoStatus = "Видео-комплект готов"
+    }
+
+    fun saveVideoModels() {
+        settings.saveOfflineModelPaths(
+            text = offlineTextModelPath,
+            image = offlineImageModelPath,
+            video = offlineVideoModelPath,
+        )
+        settings.saveVideoSupportPaths(
+            vae = videoVaePath,
+            textEncoder = videoTextEncoderPath,
+        )
+        videoStatus = "Пути видео-моделей сохранены"
+    }
+
+    fun generateOfflineVideo() {
+        if (busy) return
+
+        val prompt = input.trim()
+        if (prompt.isBlank()) {
+            videoStatus = "Сначала опиши видео"
+            return
+        }
+
+        val missing = listOf(
+            "Wan diffusion" to offlineVideoModelPath,
+            "VAE" to videoVaePath,
+            "UMT5" to videoTextEncoderPath,
+        ).firstOrNull { (_, path) ->
+            path.isBlank() || !File(path).isFile
+        }
+
+        if (missing != null) {
+            videoStatus = "Не найден файл: " + missing.first
+            return
+        }
+
+        viewModelScope.launch {
+            busy = true
+            videoStatus = "Генерирую офлайн-видео • 320×192 • 9 кадров…"
+
+            runCatching {
+                localVideo.generate(
+                    diffusionModelPath = offlineVideoModelPath,
+                    vaePath = videoVaePath,
+                    textEncoderPath = videoTextEncoderPath,
+                    prompt = prompt,
+                    width = 320,
+                    height = 192,
+                    steps = 8,
+                    frameCount = 9,
+                    fps = 8,
+                )
+            }.onSuccess { result ->
+                generatedVideoPath = result.filePath
+                videoStatus = "Видео готово: " +
+                    File(result.filePath).name +
+                    " • " + result.frameCount + " кадров"
+            }.onFailure {
+                videoStatus = "Ошибка офлайн-видео: " +
+                    (it.message ?: it::class.java.simpleName)
+            }
+
+            busy = false
+        }
+    }
+
+    fun openGeneratedVideo() {
+        val file = File(generatedVideoPath)
+
+        if (!file.isFile) {
+            videoStatus = "Сначала сгенерируй видео"
+            return
+        }
+
+        runCatching {
+            val uri = FileProvider.getUriForFile(
+                appContext,
+                appContext.packageName + ".fileprovider",
+                file,
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "video/mp4")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            appContext.startActivity(intent)
+        }.onFailure {
+            videoStatus = "Не удалось открыть видео: " +
+                (it.message ?: it::class.java.simpleName)
         }
     }
 
@@ -1187,6 +1357,7 @@ class AssistantViewModel(
     }
 
     override fun onCleared() {
+        localVideo.close()
         localImage.close()
         localAi.close()
         super.onCleared()
