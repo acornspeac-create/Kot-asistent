@@ -63,20 +63,34 @@ jobs:
               -validity 10000
           fi
 
+      - name: Validate game JavaScript
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path("simple-game/app/src/main/assets/index.html").read_text(encoding="utf-8")
+          start = html.rfind("<script>") + len("<script>")
+          end = html.rfind("</script>")
+          if start < len("<script>") or end <= start:
+              raise SystemExit("Game script block not found")
+          Path("/tmp/kot-game.js").write_text(html[start:end], encoding="utf-8")
+          PY
+          node --check /tmp/kot-game.js
+
       - name: Build APK and AAB
         run: gradle -p simple-game :app:assembleDebug :app:bundleDebug --no-daemon
 
       - name: Prepare build files
         shell: bash
         run: |
-          cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.2.apk
-          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.2-test.aab
+          cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.3.apk
+          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.3-test.aab
 
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: kot-catch-v2-2-build
+          name: kot-catch-v2-3-build
           path: |
-            simple-game/KOT-Catch-v2.2.apk
-            simple-game/KOT-Catch-v2.2-test.aab
+            simple-game/KOT-Catch-v2.3.apk
+            simple-game/KOT-Catch-v2.3-test.aab
           retention-days: 7
