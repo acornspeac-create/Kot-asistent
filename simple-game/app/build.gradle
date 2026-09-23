@@ -10,7 +10,11 @@ android {
         applicationId "com.sam.catchgame"
         minSdk 23
         targetSdk 35
-        versionCode 3
-        versionName "2.0"
+        versionCode 4
+        versionName "2.1"
     }
+}
+
+dependencies {
+    implementation 'com.android.billingclient:billing:9.1.0'
 }
