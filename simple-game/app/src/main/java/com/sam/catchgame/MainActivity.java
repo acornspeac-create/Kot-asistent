@@ -1,11 +1,19 @@
 package com.sam.catchgame;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -29,6 +37,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 public class MainActivity extends Activity implements PurchasesUpdatedListener {
     private WebView webView;
@@ -60,15 +75,45 @@ public class MainActivity extends Activity implements PurchasesUpdatedListener {
 
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF070B12);
-        webView.setWebViewClient(new WebViewClient());
+        WebView.setWebContentsDebuggingEnabled(false);
+        webView.setWebViewClient(new WebViewClient() {
+            private boolean isAllowed(Uri uri) {
+                if (uri == null) return false;
+                if ("about".equals(uri.getScheme()) && "blank".equals(uri.getSchemeSpecificPart())) {
+                    return true;
+                }
+                return "file".equals(uri.getScheme())
+                        && "/android_asset/index.html".equals(uri.getPath());
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return !isAllowed(request.getUrl());
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return !isAllowed(Uri.parse(url));
+            }
+        });
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(false);
+        settings.setAllowFileAccessFromFileURLs(false);
+        settings.setAllowUniversalAccessFromFileURLs(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(true);
+        }
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         webView.addJavascriptInterface(new BillingBridge(), "AndroidBilling");
+        webView.addJavascriptInterface(new SecureStoreBridge(this), "AndroidSecureStore");
 
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
@@ -281,6 +326,122 @@ public class MainActivity extends Activity implements PurchasesUpdatedListener {
                 JSONObject.quote(message == null ? "Google Play" : message) + ");");
     }
 
+    public static class SecureStoreBridge {
+        private static final String PREFS = "kot_secure_state";
+        private static final String STATE_KEY = "encrypted_state";
+        private static final String KEY_ALIAS = "kot_catch_aes_gcm_v1";
+        private final Context context;
+        private final SecureRandom random = new SecureRandom();
+
+        SecureStoreBridge(Context context) {
+            this.context = context.getApplicationContext();
+        }
+
+        private SecretKey getOrCreateKey() throws Exception {
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+
+            if (!keyStore.containsAlias(KEY_ALIAS)) {
+                KeyGenerator keyGenerator = KeyGenerator.getInstance(
+                        KeyProperties.KEY_ALGORITHM_AES,
+                        "AndroidKeyStore"
+                );
+                keyGenerator.init(
+                        new KeyGenParameterSpec.Builder(
+                                KEY_ALIAS,
+                                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
+                        )
+                                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                                .setKeySize(256)
+                                .build()
+                );
+                keyGenerator.generateKey();
+            }
+
+            KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry)
+                    keyStore.getEntry(KEY_ALIAS, null);
+            return entry.getSecretKey();
+        }
+
+        @JavascriptInterface
+        public synchronized boolean save(String json) {
+            try {
+                if (json == null || json.length() > 1_000_000) return false;
+
+                byte[] iv = new byte[12];
+                random.nextBytes(iv);
+
+                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                cipher.init(
+                        Cipher.ENCRYPT_MODE,
+                        getOrCreateKey(),
+                        new GCMParameterSpec(128, iv)
+                );
+
+                byte[] encrypted = cipher.doFinal(
+                        json.getBytes(StandardCharsets.UTF_8)
+                );
+
+                byte[] payload = new byte[iv.length + encrypted.length];
+                System.arraycopy(iv, 0, payload, 0, iv.length);
+                System.arraycopy(encrypted, 0, payload, iv.length, encrypted.length);
+
+                String encoded = Base64.encodeToString(payload, Base64.NO_WRAP);
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString(STATE_KEY, encoded)
+                        .apply();
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public synchronized String load() {
+            try {
+                SharedPreferences prefs =
+                        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                String encoded = prefs.getString(STATE_KEY, "");
+                if (encoded == null || encoded.isEmpty()) return "";
+
+                byte[] payload = Base64.decode(encoded, Base64.NO_WRAP);
+                if (payload.length <= 12) return "";
+
+                byte[] iv = new byte[12];
+                byte[] encrypted = new byte[payload.length - 12];
+                System.arraycopy(payload, 0, iv, 0, 12);
+                System.arraycopy(payload, 12, encrypted, 0, encrypted.length);
+
+                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                cipher.init(
+                        Cipher.DECRYPT_MODE,
+                        getOrCreateKey(),
+                        new GCMParameterSpec(128, iv)
+                );
+
+                byte[] clear = cipher.doFinal(encrypted);
+                return new String(clear, StandardCharsets.UTF_8);
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+
+        @JavascriptInterface
+        public synchronized boolean clear() {
+            try {
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .edit()
+                        .remove(STATE_KEY)
+                        .apply();
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+    }
+
     public class BillingBridge {
         @JavascriptInterface
         public void requestProducts() {
@@ -324,6 +485,7 @@ public class MainActivity extends Activity implements PurchasesUpdatedListener {
         }
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidBilling");
+            webView.removeJavascriptInterface("AndroidSecureStore");
             webView.destroy();
         }
         super.onDestroy();
