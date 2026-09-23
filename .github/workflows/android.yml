@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: kot-assistant-android-main
+  group: kot-assistant-android-main-v2
   cancel-in-progress: true
 
 jobs:
