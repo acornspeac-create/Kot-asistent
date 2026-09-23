@@ -4,7 +4,9 @@
 
     <application
         android:allowBackup="true"
-        android:label="Лови цель"
+        android:label="KOT Catch"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:hardwareAccelerated="true">
         <activity
