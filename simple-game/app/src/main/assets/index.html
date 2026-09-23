@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Лови цель</title>
+<style>
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#070b12;font-family:Arial,sans-serif;color:#fff}
+#game{width:100vw;height:100vh;position:relative;overflow:hidden;background:radial-gradient(circle at top,#18233b,#070b12 70%)}
+#top{position:absolute;top:18px;left:12px;right:12px;display:flex;gap:8px;justify-content:space-between;z-index:10;font-size:16px;font-weight:700}
+.box{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.07);padding:10px 12px;border-radius:16px;backdrop-filter:blur(10px)}
+#combo{position:absolute;top:82px;width:100%;text-align:center;font-size:26px;font-weight:900;color:#ffd43b;opacity:0;transform:scale(.5);transition:.13s;pointer-events:none}
+#target{position:absolute;width:92px;height:92px;border-radius:50%;display:none;background:radial-gradient(circle at 35% 30%,#d7ffff 0 8%,#00e9ff 24%,#0868ff 63%,#0927a7 100%);box-shadow:0 0 18px #00c8ff,0 0 52px rgba(0,150,255,.62),inset 0 0 18px rgba(255,255,255,.45);cursor:pointer}
+#target:after{content:"";position:absolute;inset:26%;border-radius:50%;border:3px solid rgba(255,255,255,.85)}
+#target:active{transform:scale(.82)}
+.screen{position:absolute;z-index:20;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(5,8,15,.89);text-align:center;padding:30px}
+#gameOver{display:none}
+h1{font-size:45px;line-height:1;margin:0 0 16px;letter-spacing:1px}
+.logo{font-size:72px;margin-bottom:10px;filter:drop-shadow(0 0 16px rgba(0,200,255,.5))}
+p{opacity:.84;font-size:17px;line-height:1.55;max-width:390px;margin:0}
+button{margin-top:24px;border:0;padding:17px 42px;border-radius:30px;font-size:20px;font-weight:900;color:#fff;background:linear-gradient(135deg,#0066ff,#8a2be2);box-shadow:0 8px 30px rgba(60,80,255,.45)}
+.floatScore{position:absolute;pointer-events:none;font-size:25px;font-weight:900;z-index:11;animation:fly .6s forwards}
+@keyframes fly{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-70px) scale(1.5)}}
+.flash{animation:flash .14s}
+@keyframes flash{50%{filter:brightness(1.35)}}
+#level{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:14px;opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="top">
+    <div class="box">Очки: <span id="score">0</span></div>
+    <div class="box">❤️ <span id="lives">3</span></div>
+    <div class="box">Рекорд: <span id="record">0</span></div>
+  </div>
+
+  <div id="combo"></div>
+  <div id="target"></div>
+  <div id="level">Уровень 1</div>
+
+  <div id="startScreen" class="screen">
+    <div class="logo">🎯</div>
+    <h1>ЛОВИ ЦЕЛЬ</h1>
+    <p>Жми на цель как можно быстрее. Чем выше счёт — тем она меньше и быстрее. Серия попаданий даёт больше очков.</p>
+    <button onclick="startGame()">ИГРАТЬ</button>
+  </div>
+
+  <div id="gameOver" class="screen">
+    <div class="logo">💥</div>
+    <h1>КОНЕЦ</h1>
+    <p>Результат: <b id="finalScore">0</b><br>Лучший рекорд: <b id="finalRecord">0</b></p>
+    <button onclick="startGame()">ЕЩЁ РАЗ</button>
+  </div>
+</div>
+
+<script>
+const game=document.getElementById("game");
+const target=document.getElementById("target");
+const scoreText=document.getElementById("score");
+const livesText=document.getElementById("lives");
+const recordText=document.getElementById("record");
+const comboText=document.getElementById("combo");
+const levelText=document.getElementById("level");
+const startScreen=document.getElementById("startScreen");
+const gameOverScreen=document.getElementById("gameOver");
+
+let score=0,lives=3,combo=0,targetSize=92,targetTime=1550,timer=null,running=false;
+let record=Number(localStorage.getItem("catchRecord"))||0;
+recordText.textContent=record;
+
+function startGame(){
+  clearTimeout(timer);
+  score=0;lives=3;combo=0;targetSize=92;targetTime=1550;running=true;
+  scoreText.textContent=0;livesText.textContent=3;levelText.textContent="Уровень 1";
+  startScreen.style.display="none";gameOverScreen.style.display="none";target.style.display="block";
+  spawnTarget();
+}
+
+function spawnTarget(){
+  if(!running)return;
+  clearTimeout(timer);
+  target.style.width=targetSize+"px";target.style.height=targetSize+"px";
+  const pad=14,top=105,bottom=45;
+  const maxX=Math.max(pad,innerWidth-targetSize-pad);
+  const maxY=Math.max(top,innerHeight-targetSize-bottom);
+  target.style.left=(pad+Math.random()*Math.max(1,maxX-pad))+"px";
+  target.style.top=(top+Math.random()*Math.max(1,maxY-top))+"px";
+  timer=setTimeout(miss,targetTime);
+}
+
+function miss(){
+  if(!running)return;
+  combo=0;lives--;livesText.textContent=lives;
+  if(navigator.vibrate)navigator.vibrate(70);
+  if(lives<=0)endGame();else spawnTarget();
+}
+
+target.addEventListener("pointerdown",e=>{
+  if(!running)return;
+  e.stopPropagation();clearTimeout(timer);combo++;
+  const bonus=1+Math.floor(combo/5);score+=bonus;scoreText.textContent=score;
+  showFloatingScore(e.clientX,e.clientY,"+"+bonus);
+  if(navigator.vibrate)navigator.vibrate(18);
+  if(combo>=3){
+    comboText.textContent="🔥 КОМБО x"+combo;comboText.style.opacity=1;comboText.style.transform="scale(1)";
+    setTimeout(()=>comboText.style.opacity=0,330);
+  }
+  game.classList.remove("flash");void game.offsetWidth;game.classList.add("flash");
+  const level=1+Math.floor(score/10);levelText.textContent="Уровень "+level;
+  targetTime=Math.max(360,1550-(level-1)*105);
+  targetSize=Math.max(36,92-(level-1)*4);
+  spawnTarget();
+});
+
+game.addEventListener("pointerdown",e=>{
+  if(!running||e.target===target||e.target.tagName==="BUTTON")return;
+  miss();
+});
+
+function showFloatingScore(x,y,text){
+  const el=document.createElement("div");el.className="floatScore";el.textContent=text;el.style.left=x+"px";el.style.top=y+"px";
+  game.appendChild(el);setTimeout(()=>el.remove(),600);
+}
+
+function endGame(){
+  running=false;clearTimeout(timer);target.style.display="none";
+  if(score>record){record=score;localStorage.setItem("catchRecord",record)}
+  recordText.textContent=record;document.getElementById("finalScore").textContent=score;document.getElementById("finalRecord").textContent=record;
+  gameOverScreen.style.display="flex";
+}
+</script>
+</body>
+</html>
