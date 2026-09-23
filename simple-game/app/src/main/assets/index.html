@@ -846,7 +846,7 @@ button{border:0;color:#fff;cursor:pointer}
       const label=d.labels[state.language]||d.labels.ru;
       return '<div class="missionCard '+(done?"done":"")+'"><div class="row"><div style="font-size:25px">'+d.emoji+'</div><div class="grow"><b>'+label+'</b><div class="muted">'+Math.min(m.target,m.progress||0)+' / '+m.target+' · 🪙 '+m.reward+'</div><div class="progressTrack"><div class="progressFill" style="width:'+Math.min(100,((m.progress||0)/m.target)*100)+'%"></div></div></div><button class="action missionClaim" data-mission="'+i+'" '+(!done||m.claimed?"disabled":"")+'>'+(m.claimed?tr("claimed"):tr("claim"))+'</button></div></div>';
     }).join("");
-    $(".missionClaim").forEach(b=>b.addEventListener("click",()=>claimMission(Number(b.dataset.mission))));
+    $$(".missionClaim").forEach(b=>b.addEventListener("click",()=>claimMission(Number(b.dataset.mission))));
   }
   function claimMission(i){
     const m=state.missionState.items[i];if(!m||m.claimed||(m.progress||0)<m.target)return;
@@ -861,7 +861,7 @@ button{border:0;color:#fff;cursor:pointer}
 
   function renderGameModes(){
     $("#gameModesGrid").innerHTML=Object.keys(GAME_RULES).map(id=>'<button class="modePick '+(state.gameRule===id?"active":"")+'" data-rule="'+id+'"><b>'+tr(GAME_RULES[id].key)+'</b><small>'+tr(GAME_RULES[id].desc)+'</small></button>').join("");
-    $("#gameModesGrid [data-rule]").forEach(b=>b.addEventListener("click",()=>{state.gameRule=b.dataset.rule;save();}));
+    $$("#gameModesGrid [data-rule]").forEach(b=>b.addEventListener("click",()=>{state.gameRule=b.dataset.rule;save();}));
   }
   function renderCharacters(){
     const box=$("#charactersGrid");if(!box)return;
@@ -870,7 +870,7 @@ button{border:0;color:#fff;cursor:pointer}
       const unlocked=state.unlockedCharacters.includes(ch.id),active=state.character===ch.id,desc=ch.desc[state.language]||ch.desc.ru;
       return '<div class="shopItem characterCard '+(active?"activeCharacter":"")+'"><div class="preview">'+(unlocked?ch.emoji:"🔒")+'</div><b>'+ch.name+'</b><small>'+desc+'</small><button class="priceBtn" data-character="'+ch.id+'" '+(!unlocked?"disabled":"")+'>'+(active?tr("selected"):unlocked?tr("select"):"🔒")+'</button></div>';
     }).join("");
-    $("#charactersGrid [data-character]").forEach(b=>b.addEventListener("click",()=>{if(state.unlockedCharacters.includes(b.dataset.character)){state.character=b.dataset.character;save();}}));
+    $$("#charactersGrid [data-character]").forEach(b=>b.addEventListener("click",()=>{if(state.unlockedCharacters.includes(b.dataset.character)){state.character=b.dataset.character;save();}}));
   }
   function renderAlbum(){
     const count=state.cards.length;$("#albumProgressText").textContent=count+" / 1000";$("#albumProgress").style.width=Math.min(100,count/10)+"%";
@@ -878,7 +878,7 @@ button{border:0;color:#fff;cursor:pointer}
       const claimed=state.albumRewardsClaimed.includes(r.count),ready=count>=r.count;
       return '<div class="albumMilestone"><div class="grow"><b>'+r.count+' 🃏</b><div class="muted">🪙 '+r.coins+' · +'+r.cards+' 🃏</div></div><button class="action albumClaim" data-album="'+r.count+'" '+(!ready||claimed?"disabled":"")+'>'+(claimed?tr("claimed"):tr("albumClaim"))+'</button></div>';
     }).join("");
-    $(".albumClaim").forEach(b=>b.addEventListener("click",()=>claimAlbum(Number(b.dataset.album))));
+    $$(".albumClaim").forEach(b=>b.addEventListener("click",()=>claimAlbum(Number(b.dataset.album))));
   }
   function claimAlbum(count){
     const r=ALBUM_REWARDS.find(x=>x.count===count);if(!r||state.cards.length<count||state.albumRewardsClaimed.includes(count))return;
@@ -890,7 +890,7 @@ button{border:0;color:#fff;cursor:pointer}
       const d=WEEKLY_POOL.find(x=>x.type===m.type),done=(m.progress||0)>=m.target,label=d.labels[state.language]||d.labels.ru;
       return '<div class="missionCard '+(done?"done":"")+'"><div class="row"><div style="font-size:25px">'+d.emoji+'</div><div class="grow"><b>'+label+'</b><div class="muted">'+Math.min(m.target,m.progress||0)+' / '+m.target+' · 🪙 '+m.reward+'</div><div class="progressTrack"><div class="progressFill" style="width:'+Math.min(100,(m.progress||0)/m.target*100)+'%"></div></div></div><button class="action weeklyClaim" data-weekly="'+i+'" '+(!done||m.claimed?"disabled":"")+'>'+(m.claimed?tr("claimed"):tr("claim"))+'</button></div></div>';
     }).join("");
-    $(".weeklyClaim").forEach(b=>b.addEventListener("click",()=>{const m=state.weeklyMissionState.items[Number(b.dataset.weekly)];if(m&&!m.claimed&&(m.progress||0)>=m.target){m.claimed=true;state.coins+=m.reward;save();rewardSound();}}));
+    $$(".weeklyClaim").forEach(b=>b.addEventListener("click",()=>{const m=state.weeklyMissionState.items[Number(b.dataset.weekly)];if(m&&!m.claimed&&(m.progress||0)>=m.target){m.claimed=true;state.coins+=m.reward;save();rewardSound();}}));
   }
 
   const screens=["home","worlds","shop","collection","profile","online","game"];
@@ -915,7 +915,7 @@ button{border:0;color:#fff;cursor:pointer}
       const owned=state.ownedSkins.includes(s.id),active=state.skin===s.id;
       return '<div class="shopItem"><div class="preview">'+s.emoji+'</div><b>'+s.name+'</b><small>'+(active?tr("used"):owned?tr("owned"):tr("targetSkin"))+'</small><button class="priceBtn" data-skin="'+s.id+'">'+(active?tr("selected"):owned?tr("select"):'🪙 '+s.price)+'</button></div>';
     }).join("");
-    $("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
+    $$("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
     const p=[["freeze","❄️","Заморозка","Котик стоит 3 секунды",90],["shield","🛡️","Щит","Защищает от одного промаха",110],["double","×2","Двойные очки","10 секунд ×2 очков",130]];
     $("#powerShop").innerHTML=p.map(x=>'<div class="shopItem"><div class="preview">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' · есть '+state.powers[x[0]]+'</small><button class="priceBtn" data-power="'+x[0]+'">🪙 '+x[4]+'</button></div>').join("");
     $$("#powerShop [data-power]").forEach(b=>b.addEventListener("click",()=>buyPower(b.dataset.power)));
@@ -945,7 +945,7 @@ button{border:0;color:#fff;cursor:pointer}
       const info=billingInfo[p.id],price=info&&info.price?info.price:"Google Play";
       return '<div class="shopItem"><div class="preview">🪙</div><b>'+p.fallback+'</b><small>'+p.title+'</small><button class="priceBtn" data-buy-product="'+p.id+'">'+price+'</button></div>';
     }).join("");
-    $("#moneyShop [data-buy-product]").forEach(b=>b.addEventListener("click",()=>buyRealCoins(b.dataset.buyProduct)));
+    $$("#moneyShop [data-buy-product]").forEach(b=>b.addEventListener("click",()=>buyRealCoins(b.dataset.buyProduct)));
   }
   function requestBillingProducts(){
     if(window.AndroidBilling&&AndroidBilling.requestProducts){AndroidBilling.requestProducts();return true}
@@ -1049,7 +1049,7 @@ button{border:0;color:#fff;cursor:pointer}
   $("#closeMode").addEventListener("click",()=>$("#modeOverlay").classList.remove("show"));
   function renderModeChoices(){
     $("#modeChoices").innerHTML=Object.keys(modes).map(k=>'<button class="secondary" data-mode="'+k+'">'+modes[k].emoji+' '+tr(k)+'</button>').join("");
-    $("#modeChoices [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();$("#modeOverlay").classList.remove("show");toast(tr(state.mode))}));
+    $$("#modeChoices [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();$("#modeOverlay").classList.remove("show");toast(tr(state.mode))}));
   }
   renderModeChoices();
 
