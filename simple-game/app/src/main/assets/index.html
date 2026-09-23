@@ -97,53 +97,53 @@ button{border:0;color:#fff;cursor:pointer}
       <div class="pill">🪙 <span data-coins>0</span></div>
     </div>
     <div class="hero">
-      <h1>Поймай<br>убегающего кота</h1>
-      <p>Он прыгает, светится, мяукает и становится хитрее.</p>
+      <h1 id="homeHeroTitle">Поймай<br>убегающего кота</h1>
+      <p id="homeHeroDesc">Он прыгает, светится, мяукает и становится хитрее.</p>
       <div class="hero-cat">🐱</div>
     </div>
     <div class="stats">
-      <div class="stat"><b data-best>0</b><small>рекорд</small></div>
-      <div class="stat"><b data-level>1</b><small>уровень</small></div>
-      <div class="stat"><b data-cards>0</b><small>карточек</small></div>
+      <div class="stat"><b data-best>0</b><small id="statBestLabel">рекорд</small></div>
+      <div class="stat"><b data-level>1</b><small id="statLevelLabel">уровень</small></div>
+      <div class="stat"><b data-cards>0</b><small id="statCardsLabel">карточек</small></div>
     </div>
     <button class="primary" id="playBtn">▶ ИГРАТЬ</button>
 
-    <div class="section-title">Сегодня</div>
+    <div class="section-title" id="todayTitle">Сегодня</div>
     <div class="grid2">
       <button class="cardBtn dailyGlow" id="dailyBtn">
-        <span class="emoji">🎁</span><b>Ежедневная награда</b><small id="dailyText">Забрать подарок</small>
+        <span class="emoji">🎁</span><b id="dailyTitle">Ежедневная награда</b><small id="dailyText">Забрать подарок</small>
       </button>
       <button class="cardBtn" id="modeBtn">
-        <span class="emoji">⚡</span><b>Сложность</b><small id="modeText">Нормально</small>
+        <span class="emoji">⚡</span><b id="difficultyTitle">Сложность</b><small id="modeText">Нормально</small>
       </button>
     </div>
 
-    <div class="section-title">Быстрый доступ</div>
+    <div class="section-title" id="quickTitle">Быстрый доступ</div>
     <div class="grid2">
-      <button class="cardBtn" data-go="worlds"><span class="emoji">🌌</span><b>Миры</b><small>16 арен открыты</small></button>
-      <button class="cardBtn" data-go="collection"><span class="emoji">🃏</span><b>Коллекция</b><small>1000 карточек</small></button>
-      <button class="cardBtn" data-go="online"><span class="emoji">🌐</span><b>Онлайн</b><small>Профиль · рейтинг · PvP</small></button>
+      <button class="cardBtn" data-go="worlds"><span class="emoji">🌌</span><b id="quickWorldsTitle">Миры</b><small id="quickWorldsDesc">16 арен открыты</small></button>
+      <button class="cardBtn" data-go="collection"><span class="emoji">🃏</span><b id="quickCollectionTitle">Коллекция</b><small id="quickCollectionDesc">1000 карточек</small></button>
+      <button class="cardBtn" data-go="online"><span class="emoji">🌐</span><b id="quickOnlineTitle">Онлайн</b><small id="quickOnlineDesc">Профиль · рейтинг · PvP</small></button>
     </div>
   </section>
 
   <section id="worldsScreen" class="screen">
-    <div class="topline"><div class="brand">🌍 Миры</div><div class="pill">Все открыты</div></div>
-    <div class="muted">Выбирай любую арену. Каждая меняет атмосферу игры.</div>
+    <div class="topline"><div class="brand" id="worldsTitle">🌍 Миры</div><div class="pill" id="worldsOpen">Все открыты</div></div>
+    <div class="muted" id="worldsDesc">Выбирай любую арену. Каждая меняет атмосферу игры.</div>
     <div class="worlds" id="worldsGrid"></div>
   </section>
 
   <section id="shopScreen" class="screen">
-    <div class="topline"><div class="brand">🛍 Магазин</div><div class="pill">🪙 <span data-coins>0</span></div></div>
-    <div class="section-title">Скины цели</div>
+    <div class="topline"><div class="brand" id="shopTitle">🛍 Магазин</div><div class="pill">🪙 <span data-coins>0</span></div></div>
+    <div class="section-title" id="shopSkinsTitle">Скины цели</div>
     <div class="shopGrid" id="skinsGrid"></div>
-    <div class="section-title">Усилители</div>
+    <div class="section-title" id="shopPowersTitle">Усилители</div>
     <div class="shopGrid" id="powerShop"></div>
 
-    <div class="section-title">Монеты за реальные деньги</div>
+    <div class="section-title" id="shopCoinsTitle">Монеты за реальные деньги</div>
     <div class="muted" id="billingHint">Покупки проходят через Google Play. Доступные способы оплаты показывает сам Google Play.</div>
     <div class="shopGrid" id="moneyShop"></div>
 
-    <div class="section-title">Реклама</div>
+    <div class="section-title" id="shopAdsTitle">Реклама</div>
     <div class="listCard">
       <div class="row">
         <div class="grow"><b>Рекламные места подготовлены</b><div class="muted">Пока реклама отключена. Когда появится рекламодатель или рекламная сеть, подключим показы и награды за просмотр.</div></div>
@@ -153,7 +153,7 @@ button{border:0;color:#fff;cursor:pointer}
   </section>
 
   <section id="collectionScreen" class="screen">
-    <div class="topline"><div class="brand">🃏 1000 карточек</div><div class="pill"><span data-cards>0</span>/1000</div></div>
+    <div class="topline"><div class="brand" id="collectionTitle">🃏 1000 карточек</div><div class="pill"><span data-cards>0</span>/1000</div></div>
     <div class="collectionTop">
       <input id="cardSearch" placeholder="Поиск: кот, панда, огонь..." autocomplete="off">
       <button id="filterUnlocked">🔓</button>
@@ -165,7 +165,7 @@ button{border:0;color:#fff;cursor:pointer}
   </section>
 
   <section id="profileScreen" class="screen">
-    <div class="topline"><div class="brand">👤 Аккаунт</div><div class="pill">LV <span data-level>1</span></div></div>
+    <div class="topline"><div class="brand" id="profileTitle">👤 Аккаунт</div><div class="pill">LV <span data-level>1</span></div></div>
     <div class="listCard profileHero">
       <div class="avatar" id="profileAvatar">🐱</div>
       <b id="profileNameLabel">Игрок</b>
@@ -178,17 +178,27 @@ button{border:0;color:#fff;cursor:pointer}
       <div class="stat"><b id="gamesText">0</b><small>игр</small></div>
       <div class="stat"><b id="hitsText">0</b><small>попаданий</small></div>
     </div>
-    <div class="section-title">Достижения</div>
+    <div class="section-title" id="achievementsTitle">Достижения</div>
     <div id="achievementsList"></div>
-    <div class="section-title">Онлайн-профиль</div>
+    <div class="section-title" id="onlineProfileTitle">Онлайн-профиль</div>
     <div class="listCard">
       <div class="row"><div class="grow"><b>Облачная синхронизация</b><div class="muted">Профиль, монеты, карты и рекорд будут переноситься между телефонами после подключения сервера.</div></div><button class="action" id="openOnlineBtn">ОНЛАЙН</button></div>
     </div>
 
-    <div class="section-title">Настройки</div>
+    <div class="section-title" id="settingsTitle">Настройки</div>
     <div class="listCard">
-      <b>Голос цели</b>
-      <div class="muted">Выбери звук животного при попадании.</div>
+      <b id="languageTitle">Язык</b>
+      <div class="muted" id="languageDesc">Выбери язык интерфейса.</div>
+      <select class="nameInput" id="languageSelect">
+        <option value="ru">🇷🇺 Русский</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="zh">🇨🇳 简体中文</option>
+      </select>
+    </div>
+    <div class="listCard">
+      <b id="voiceTitle">Голос цели</b>
+      <div class="muted" id="voiceDesc">Выбери звук животного при попадании.</div>
       <select class="nameInput" id="animalSoundSelect">
         <option value="cat">🐱 Кот — мяу</option>
         <option value="dog">🐶 Собака — гав</option>
@@ -210,7 +220,7 @@ button{border:0;color:#fff;cursor:pointer}
   </section>
 
   <section id="onlineScreen" class="screen">
-    <div class="topline"><div class="brand">🌐 Онлайн</div><div class="pill" id="onlineBadge">OFFLINE</div></div>
+    <div class="topline"><div class="brand" id="onlineTitle">🌐 Онлайн</div><div class="pill" id="onlineBadge">OFFLINE</div></div>
     <div class="hero">
       <h1>Онлайн-мир<br>KOT Catch</h1>
       <p id="onlineStatusText">Клиент готов. Для настоящего входа, рейтинга и PvP нужно подключить сервер аккаунтов.</p>
@@ -258,11 +268,11 @@ button{border:0;color:#fff;cursor:pointer}
   </section>
 
   <nav class="nav" id="nav">
-    <button class="active" data-screen="home"><strong>🏠</strong>Главная</button>
-    <button data-screen="worlds"><strong>🌌</strong>Миры</button>
-    <button data-screen="shop"><strong>🛍️</strong>Магазин</button>
-    <button data-screen="collection"><strong>🃏</strong>Карты</button>
-    <button data-screen="profile"><strong>👤</strong>Профиль</button>
+    <button class="active" data-screen="home"><strong>🏠</strong><span id="navHome">Главная</span></button>
+    <button data-screen="worlds"><strong>🌌</strong><span id="navWorlds">Миры</span></button>
+    <button data-screen="shop"><strong>🛍️</strong><span id="navShop">Магазин</span></button>
+    <button data-screen="collection"><strong>🃏</strong><span id="navCards">Карты</span></button>
+    <button data-screen="profile"><strong>👤</strong><span id="navProfile">Профиль</span></button>
   </nav>
 
   <div class="overlay" id="modeOverlay">
@@ -291,17 +301,119 @@ button{border:0;color:#fff;cursor:pointer}
   const defaultState={
     coins:250,best:0,xp:0,games:0,totalHits:0,maxCombo:0,
     nickname:"Игрок",guestId:"KOT-"+Math.random().toString(36).slice(2,8).toUpperCase(),
-    sound:true,vibrate:true,soundType:"cat",world:0,mode:"normal",skin:"cat",
+    sound:true,vibrate:true,soundType:"cat",language:"ru",world:0,mode:"normal",skin:"cat",
     ownedSkins:["cat"],cards:[0,1,2,3,4,5],lastDaily:"",
     powers:{freeze:2,shield:1,double:1},worldsPlayed:{},achievements:{}
   };
+  function readSavedState(){
+    let raw="";
+    try{
+      if(window.AndroidSecureStore&&AndroidSecureStore.load){
+        raw=AndroidSecureStore.load()||"";
+      }
+    }catch(e){}
+    if(!raw){
+      try{raw=localStorage.getItem(key)||"";}catch(e){}
+    }
+    return raw;
+  }
   let state;
-  try{state=Object.assign({},defaultState,JSON.parse(localStorage.getItem(key)||"{}"));}catch(e){state=defaultState}
+  try{state=Object.assign({},defaultState,JSON.parse(readSavedState()||"{}"));}catch(e){state=Object.assign({},defaultState)}
+  if(!["ru","en","ja","zh"].includes(state.language))state.language="ru";
   state.powers=Object.assign({},defaultState.powers,state.powers||{});
   state.worldsPlayed=state.worldsPlayed||{};
   state.achievements=state.achievements||{};
   state.ownedSkins=state.ownedSkins||["cat"];
   state.cards=Array.from(new Set((state.cards||[]).map(Number))).filter(n=>n>=0&&n<1000);
+
+  const I18N={
+    ru:{
+      homeHeroTitle:"Поймай<br>убегающего кота",homeHeroDesc:"Он прыгает, светится, мяукает и становится хитрее.",
+      best:"рекорд",level:"уровень",cards:"карточек",play:"▶ ИГРАТЬ",today:"Сегодня",daily:"Ежедневная награда",difficulty:"Сложность",
+      quick:"Быстрый доступ",worlds:"Миры",worldsDescShort:"16 арен открыты",collection:"Коллекция",collectionDesc:"1000 карточек",
+      online:"Онлайн",onlineDesc:"Профиль · рейтинг · PvP",allOpen:"Все открыты",worldsLong:"Выбирай любую арену. Каждая меняет атмосферу игры.",
+      shop:"🛍 Магазин",skins:"Скины цели",powers:"Усилители",realCoins:"Монеты за реальные деньги",ads:"Реклама",
+      collectionTitle:"🃏 1000 карточек",profile:"👤 Аккаунт",achievements:"Достижения",onlineProfile:"Онлайн-профиль",settings:"Настройки",
+      language:"Язык",languageDesc:"Выбери язык интерфейса.",voice:"Голос цели",voiceDesc:"Выбери звук животного при попадании.",
+      navHome:"Главная",navWorlds:"Миры",navShop:"Магазин",navCards:"Карты",navProfile:"Профиль",
+      dailyDone:"Уже получено",dailyClaim:"Забрать 150 🪙 + карточку",
+      easy:"Легко",normal:"Нормально",hard:"Хард",insane:"Безумие",arena:"Арена",
+      used:"Используется",owned:"Куплено",targetSkin:"Скин цели",selected:"✓ Выбран",select:"Выбрать",
+      saveProfile:"Сохранить профиль",nickname:"Твой ник",games:"игр",hits:"попаданий",
+      voiceCat:"🐱 Кот — мяу",voiceDog:"🐶 Собака — гав",voiceBird:"🐦 Птица — чирик",voiceTiger:"🐯 Тигр — рык",voiceLion:"🦁 Лев — рык",voiceFrog:"🐸 Лягушка — квак",voiceOwl:"🦉 Сова — уху",voiceMouse:"🐭 Мышь — писк"
+    },
+    en:{
+      homeHeroTitle:"Catch the<br>runaway cat",homeHeroDesc:"It jumps, glows, meows, and gets smarter as you play.",
+      best:"best",level:"level",cards:"cards",play:"▶ PLAY",today:"Today",daily:"Daily reward",difficulty:"Difficulty",
+      quick:"Quick access",worlds:"Worlds",worldsDescShort:"16 arenas unlocked",collection:"Collection",collectionDesc:"1000 cards",
+      online:"Online",onlineDesc:"Profile · ranking · PvP",allOpen:"All unlocked",worldsLong:"Choose any arena. Each one changes the atmosphere.",
+      shop:"🛍 Shop",skins:"Target skins",powers:"Power-ups",realCoins:"Coins for real money",ads:"Ads",
+      collectionTitle:"🃏 1000 cards",profile:"👤 Account",achievements:"Achievements",onlineProfile:"Online profile",settings:"Settings",
+      language:"Language",languageDesc:"Choose the interface language.",voice:"Target voice",voiceDesc:"Choose the animal sound on hit.",
+      navHome:"Home",navWorlds:"Worlds",navShop:"Shop",navCards:"Cards",navProfile:"Profile",
+      dailyDone:"Already claimed",dailyClaim:"Claim 150 🪙 + card",
+      easy:"Easy",normal:"Normal",hard:"Hard",insane:"Insane",arena:"Arena",
+      used:"In use",owned:"Owned",targetSkin:"Target skin",selected:"✓ Selected",select:"Select",
+      saveProfile:"Save profile",nickname:"Your nickname",games:"games",hits:"hits",
+      voiceCat:"🐱 Cat — meow",voiceDog:"🐶 Dog — bark",voiceBird:"🐦 Bird — chirp",voiceTiger:"🐯 Tiger — roar",voiceLion:"🦁 Lion — roar",voiceFrog:"🐸 Frog — croak",voiceOwl:"🦉 Owl — hoot",voiceMouse:"🐭 Mouse — squeak"
+    },
+    ja:{
+      homeHeroTitle:"逃げるネコを<br>捕まえよう",homeHeroDesc:"ジャンプして光り、鳴きながらどんどん賢くなる。",
+      best:"ベスト",level:"レベル",cards:"カード",play:"▶ プレイ",today:"今日",daily:"デイリー報酬",difficulty:"難易度",
+      quick:"クイックアクセス",worlds:"ワールド",worldsDescShort:"16アリーナ解放済み",collection:"コレクション",collectionDesc:"1000枚のカード",
+      online:"オンライン",onlineDesc:"プロフィール · ランキング · PvP",allOpen:"すべて解放済み",worldsLong:"好きなアリーナを選択。世界ごとに雰囲気が変わります。",
+      shop:"🛍 ショップ",skins:"ターゲットスキン",powers:"パワーアップ",realCoins:"有料コイン",ads:"広告",
+      collectionTitle:"🃏 1000枚のカード",profile:"👤 アカウント",achievements:"実績",onlineProfile:"オンラインプロフィール",settings:"設定",
+      language:"言語",languageDesc:"インターフェースの言語を選択。",voice:"ターゲットの鳴き声",voiceDesc:"ヒット時の動物の鳴き声を選択。",
+      navHome:"ホーム",navWorlds:"ワールド",navShop:"ショップ",navCards:"カード",navProfile:"プロフィール",
+      dailyDone:"受取済み",dailyClaim:"150 🪙 + カードを受け取る",
+      easy:"かんたん",normal:"ノーマル",hard:"ハード",insane:"クレイジー",arena:"アリーナ",
+      used:"使用中",owned:"購入済み",targetSkin:"ターゲットスキン",selected:"✓ 選択中",select:"選択",
+      saveProfile:"プロフィールを保存",nickname:"ニックネーム",games:"ゲーム",hits:"ヒット",
+      voiceCat:"🐱 ネコ — ニャー",voiceDog:"🐶 イヌ — ワン",voiceBird:"🐦 トリ — チュン",voiceTiger:"🐯 トラ — ガオー",voiceLion:"🦁 ライオン — ガオー",voiceFrog:"🐸 カエル — ケロ",voiceOwl:"🦉 フクロウ — ホー",voiceMouse:"🐭 ネズミ — チュー"
+    },
+    zh:{
+      homeHeroTitle:"抓住<br>逃跑的猫",homeHeroDesc:"它会跳跃、发光、叫唤，而且越来越聪明。",
+      best:"最高分",level:"等级",cards:"卡片",play:"▶ 开始游戏",today:"今天",daily:"每日奖励",difficulty:"难度",
+      quick:"快捷入口",worlds:"世界",worldsDescShort:"16个竞技场已解锁",collection:"收藏",collectionDesc:"1000张卡片",
+      online:"在线",onlineDesc:"个人资料 · 排行榜 · PvP",allOpen:"全部已解锁",worldsLong:"选择任意竞技场，每个世界都有不同氛围。",
+      shop:"🛍 商店",skins:"目标皮肤",powers:"强化道具",realCoins:"真实货币购买金币",ads:"广告",
+      collectionTitle:"🃏 1000张卡片",profile:"👤 账户",achievements:"成就",onlineProfile:"在线资料",settings:"设置",
+      language:"语言",languageDesc:"选择界面语言。",voice:"目标声音",voiceDesc:"选择命中时的动物叫声。",
+      navHome:"首页",navWorlds:"世界",navShop:"商店",navCards:"卡片",navProfile:"资料",
+      dailyDone:"今日已领取",dailyClaim:"领取 150 🪙 + 卡片",
+      easy:"简单",normal:"普通",hard:"困难",insane:"疯狂",arena:"竞技场",
+      used:"使用中",owned:"已拥有",targetSkin:"目标皮肤",selected:"✓ 已选择",select:"选择",
+      saveProfile:"保存资料",nickname:"你的昵称",games:"场游戏",hits:"命中",
+      voiceCat:"🐱 猫 — 喵",voiceDog:"🐶 狗 — 汪",voiceBird:"🐦 鸟 — 啾",voiceTiger:"🐯 老虎 — 吼",voiceLion:"🦁 狮子 — 吼",voiceFrog:"🐸 青蛙 — 呱",voiceOwl:"🦉 猫头鹰 — 咕",voiceMouse:"🐭 老鼠 — 吱"
+    }
+  };
+  function tr(k){const lang=I18N[state.language]||I18N.ru;return lang[k]||I18N.ru[k]||k}
+  function setTxt(id,key,html){
+    const el=$("#"+id);if(!el)return;
+    if(html)el.innerHTML=tr(key);else el.textContent=tr(key);
+  }
+  function applyLanguage(){
+    document.documentElement.lang=state.language==="zh"?"zh-CN":state.language;
+    const htmlMap={homeHeroTitle:"homeHeroTitle"};
+    Object.keys(htmlMap).forEach(id=>setTxt(id,htmlMap[id],true));
+    const map={
+      homeHeroDesc:"homeHeroDesc",statBestLabel:"best",statLevelLabel:"level",statCardsLabel:"cards",
+      playBtn:"play",todayTitle:"today",dailyTitle:"daily",difficultyTitle:"difficulty",quickTitle:"quick",
+      quickWorldsTitle:"worlds",quickWorldsDesc:"worldsDescShort",quickCollectionTitle:"collection",quickCollectionDesc:"collectionDesc",
+      quickOnlineTitle:"online",quickOnlineDesc:"onlineDesc",worldsTitle:"worlds",worldsOpen:"allOpen",worldsDesc:"worldsLong",
+      shopTitle:"shop",shopSkinsTitle:"skins",shopPowersTitle:"powers",shopCoinsTitle:"realCoins",shopAdsTitle:"ads",
+      collectionTitle:"collectionTitle",profileTitle:"profile",achievementsTitle:"achievements",onlineProfileTitle:"onlineProfile",
+      settingsTitle:"settings",languageTitle:"language",languageDesc:"languageDesc",voiceTitle:"voice",voiceDesc:"voiceDesc",
+      navHome:"navHome",navWorlds:"navWorlds",navShop:"navShop",navCards:"navCards",navProfile:"navProfile",onlineTitle:"online"
+    };
+    Object.keys(map).forEach(id=>setTxt(id,map[id]));
+    $("#saveProfile").textContent=tr("saveProfile");
+    $("#nicknameInput").placeholder=tr("nickname");
+    $("#languageSelect").value=state.language;
+    const optKeys={cat:"voiceCat",dog:"voiceDog",bird:"voiceBird",tiger:"voiceTiger",lion:"voiceLion",frog:"voiceFrog",owl:"voiceOwl",mouse:"voiceMouse"};
+    Array.from($("#animalSoundSelect").options).forEach(o=>{if(optKeys[o.value])o.textContent=tr(optKeys[o.value])});
+  }
 
   const worlds=[
     ["Неоновый город","🌃","linear-gradient(155deg,#17184a,#09122a 55%,#071018)"],
@@ -375,7 +487,21 @@ button{border:0;color:#fff;cursor:pointer}
     {id:"maps5",emoji:"🌌",name:"Путешественник",desc:"Сыграть в 5 мирах",ok:s=>Object.keys(s.worldsPlayed).length>=5}
   ];
 
-  function save(){localStorage.setItem(key,JSON.stringify(state));refreshAll()}
+  function save(){
+    const json=JSON.stringify(state);
+    let secured=false;
+    try{
+      if(window.AndroidSecureStore&&AndroidSecureStore.save){
+        secured=!!AndroidSecureStore.save(json);
+      }
+    }catch(e){}
+    if(!secured){
+      try{localStorage.setItem(key,json);}catch(e){}
+    }else{
+      try{localStorage.removeItem(key);}catch(e){}
+    }
+    refreshAll();
+  }
   function level(){return Math.max(1,Math.floor(state.xp/100)+1)}
   function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove("show"),1800)}
   function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -446,9 +572,10 @@ button{border:0;color:#fff;cursor:pointer}
     $("#soundToggle").textContent=state.sound?"ВКЛ":"ВЫКЛ";
     $("#vibrateToggle").textContent=state.vibrate?"ВКЛ":"ВЫКЛ";
     $("#animalSoundSelect").value=state.soundType||"cat";
-    $("#modeText").textContent=modes[state.mode].name;
-    $("#dailyText").textContent=state.lastDaily===today()?"Уже получено":"Забрать 150 🪙 + карточку";
-    renderWorlds();renderShop();renderMoneyShop();renderCards();renderAchievements();
+    $("#modeText").textContent=tr(state.mode);
+    $("#dailyText").textContent=state.lastDaily===today()?tr("dailyDone"):tr("dailyClaim");
+    $("#languageSelect").value=state.language;
+    renderWorlds();renderShop();renderMoneyShop();renderCards();renderAchievements();applyLanguage();
   }
 
   const screens=["home","worlds","shop","collection","profile","online","game"];
@@ -463,14 +590,14 @@ button{border:0;color:#fff;cursor:pointer}
   $$("[data-go]").forEach(b=>b.addEventListener("click",()=>showScreen(b.dataset.go)));
 
   function renderWorlds(){
-    $("#worldsGrid").innerHTML=worlds.map((w,i)=>'<button class="world '+(state.world===i?'activeWorld':'')+'" data-world="'+i+'" style="background:'+w[2]+'"><span class="wemoji">'+w[1]+'</span><b>'+w[0]+'</b><small>Арена '+(i+1)+'</small></button>').join("");
+    $("#worldsGrid").innerHTML=worlds.map((w,i)=>'<button class="world '+(state.world===i?'activeWorld':'')+'" data-world="'+i+'" style="background:'+w[2]+'"><span class="wemoji">'+w[1]+'</span><b>'+w[0]+'</b><small>'+tr("arena")+' '+(i+1)+'</small></button>').join("");
     $$("#worldsGrid [data-world]").forEach(b=>b.addEventListener("click",()=>{state.world=Number(b.dataset.world);save();toast("Выбран мир: "+worlds[state.world][0])}));
   }
 
   function renderShop(){
     $("#skinsGrid").innerHTML=skins.map(s=>{
       const owned=state.ownedSkins.includes(s.id),active=state.skin===s.id;
-      return '<div class="shopItem"><div class="preview">'+s.emoji+'</div><b>'+s.name+'</b><small>'+(active?'Используется':owned?'Куплено':'Скин цели')+'</small><button class="priceBtn" data-skin="'+s.id+'">'+(active?'✓ Выбран':owned?'Выбрать':'🪙 '+s.price)+'</button></div>';
+      return '<div class="shopItem"><div class="preview">'+s.emoji+'</div><b>'+s.name+'</b><small>'+(active?tr("used"):owned?tr("owned"):tr("targetSkin"))+'</small><button class="priceBtn" data-skin="'+s.id+'">'+(active?tr("selected"):owned?tr("select"):'🪙 '+s.price)+'</button></div>';
     }).join("");
     $$("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
     const p=[["freeze","❄️","Заморозка","Котик стоит 3 секунды",90],["shield","🛡️","Щит","Защищает от одного промаха",110],["double","×2","Двойные очки","10 секунд ×2 очков",130]];
@@ -572,7 +699,10 @@ button{border:0;color:#fff;cursor:pointer}
   $("#saveProfile").addEventListener("click",()=>{
     const n=$("#nicknameInput").value.trim().slice(0,18);state.nickname=n||"Игрок";save();toast("Профиль сохранён");
   });
-  $("#animalSoundSelect").addEventListener("change",()=>{
+  $("#languageSelect").addEventListener("change",()=>{
+    state.language=$("#languageSelect").value;save();renderModeChoices();toast("✓ "+$("#languageSelect option:checked").textContent);
+  });
+    $("#animalSoundSelect").addEventListener("change",()=>{
     state.soundType=$("#animalSoundSelect").value;save();animalVoice(1);toast("Голос изменён");
   });
   $("#soundToggle").addEventListener("click",()=>{state.sound=!state.sound;save();if(state.sound)animalVoice(1)});
@@ -584,8 +714,11 @@ button{border:0;color:#fff;cursor:pointer}
 
   $("#modeBtn").addEventListener("click",()=>$("#modeOverlay").classList.add("show"));
   $("#closeMode").addEventListener("click",()=>$("#modeOverlay").classList.remove("show"));
-  $("#modeChoices").innerHTML=Object.keys(modes).map(k=>'<button class="secondary" data-mode="'+k+'">'+modes[k].emoji+' '+modes[k].name+'</button>').join("");
-  $$("#modeChoices [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();$("#modeOverlay").classList.remove("show");toast("Сложность: "+modes[state.mode].name)}));
+  function renderModeChoices(){
+    $("#modeChoices").innerHTML=Object.keys(modes).map(k=>'<button class="secondary" data-mode="'+k+'">'+modes[k].emoji+' '+tr(k)+'</button>').join("");
+    $("#modeChoices [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();$("#modeOverlay").classList.remove("show");toast(tr(state.mode))}));
+  }
+  renderModeChoices();
 
   let score=0,lives=3,combo=0,runCoins=0,running=false,paused=false;
   let targetSize=94,jumpInterval=540,roundTime=2250,jumpTimer=null,missTimer=null;
@@ -697,6 +830,12 @@ button{border:0;color:#fff;cursor:pointer}
   $("#resultHomeBtn").addEventListener("click",()=>{$("#resultOverlay").classList.remove("show");showScreen("home")});
 
   refreshAll();
+  try{
+    if(window.AndroidSecureStore&&AndroidSecureStore.save){
+      AndroidSecureStore.save(JSON.stringify(state));
+      localStorage.removeItem(key);
+    }
+  }catch(e){}
 })();
 </script>
 </body>
