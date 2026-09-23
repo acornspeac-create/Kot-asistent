@@ -2,264 +2,569 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Лови цель</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>KOT Catch</title>
 <style>
-*{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#070b12;font-family:Arial,sans-serif;color:#fff}
-#game{width:100vw;height:100vh;position:relative;overflow:hidden;background:radial-gradient(circle at top,#18233b,#070b12 70%)}
-#top{position:absolute;top:18px;left:12px;right:12px;display:flex;gap:8px;justify-content:space-between;z-index:10;font-size:16px;font-weight:700}
-.box{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.07);padding:10px 12px;border-radius:16px;backdrop-filter:blur(10px)}
-#combo{position:absolute;top:82px;width:100%;text-align:center;font-size:26px;font-weight:900;color:#ffd43b;opacity:0;transform:scale(.5);transition:.13s;pointer-events:none}
-#target{
-  position:absolute;width:92px;height:92px;border-radius:50%;display:none;
-  background:radial-gradient(circle at 35% 30%,#d7ffff 0 8%,#00e9ff 24%,#0868ff 63%,#0927a7 100%);
-  box-shadow:0 0 18px #00c8ff,0 0 52px rgba(0,150,255,.62),inset 0 0 18px rgba(255,255,255,.45);
-  cursor:pointer;transition:left .09s linear,top .09s linear,width .12s,height .12s,transform .08s;
+:root{
+  --bg1:#101526;--bg2:#05070e;--glass:rgba(255,255,255,.085);--line:rgba(255,255,255,.11);
+  --text:#fff;--muted:rgba(255,255,255,.7);--accent:#7c5cff;--accent2:#00d9ff;--gold:#ffd34d;
 }
-#target:after{content:"";position:absolute;inset:26%;border-radius:50%;border:3px solid rgba(255,255,255,.85)}
-#target.jump{transform:scale(.78) rotate(10deg)}
-#target:active{transform:scale(.72)}
-.screen{position:absolute;z-index:20;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(5,8,15,.89);text-align:center;padding:30px}
-#gameOver{display:none}
-h1{font-size:45px;line-height:1;margin:0 0 16px;letter-spacing:1px}
-.logo{font-size:72px;margin-bottom:10px;filter:drop-shadow(0 0 16px rgba(0,200,255,.5))}
-p{opacity:.84;font-size:17px;line-height:1.55;max-width:390px;margin:0}
-button{margin-top:24px;border:0;padding:17px 42px;border-radius:30px;font-size:20px;font-weight:900;color:#fff;background:linear-gradient(135deg,#0066ff,#8a2be2);box-shadow:0 8px 30px rgba(60,80,255,.45)}
-.floatScore{position:absolute;pointer-events:none;font-size:25px;font-weight:900;z-index:11;animation:fly .6s forwards}
-@keyframes fly{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-70px) scale(1.5)}}
-.flash{animation:flash .14s}
-@keyframes flash{50%{filter:brightness(1.35)}}
-#level{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:14px;opacity:.68;pointer-events:none}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070e;color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input{font:inherit}
+button{border:0;color:#fff;cursor:pointer}
+#app{position:relative;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% -10%,#26345c 0,#0d1221 43%,#05070e 100%)}
+.screen{position:absolute;inset:0;display:none;overflow-y:auto;padding:18px 16px 94px}
+.screen.active{display:block}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.brand{font-weight:1000;letter-spacing:1px;font-size:24px}
+.brand span{color:#7fdcff}
+.pill{padding:9px 12px;border-radius:15px;background:var(--glass);border:1px solid var(--line);font-weight:800;font-size:14px;backdrop-filter:blur(10px)}
+.hero{padding:18px;border-radius:28px;background:linear-gradient(135deg,rgba(124,92,255,.19),rgba(0,217,255,.10));border:1px solid var(--line);overflow:hidden;position:relative}
+.hero h1{font-size:33px;margin:0 0 8px;line-height:1}
+.hero p{margin:0;color:var(--muted);line-height:1.45}
+.hero-cat{font-size:82px;position:absolute;right:10px;bottom:-16px;filter:drop-shadow(0 0 22px rgba(127,220,255,.45));transform:rotate(-8deg)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+.stat{background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:12px;text-align:center}
+.stat b{display:block;font-size:20px}.stat small{color:var(--muted);font-size:11px}
+.section-title{font-size:19px;font-weight:900;margin:20px 2px 10px}
+.primary{width:100%;padding:17px;border-radius:20px;font-weight:1000;font-size:19px;background:linear-gradient(135deg,#684dff,#00aeea);box-shadow:0 12px 28px rgba(64,84,255,.27)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cardBtn{min-height:98px;padding:14px;text-align:left;border-radius:22px;background:var(--glass);border:1px solid var(--line);position:relative;overflow:hidden}
+.cardBtn .emoji{font-size:30px;display:block;margin-bottom:8px}.cardBtn b{font-size:15px}.cardBtn small{display:block;color:var(--muted);margin-top:3px}
+.dailyGlow{background:linear-gradient(135deg,rgba(255,195,63,.18),rgba(255,99,71,.10))}
+.nav{position:absolute;z-index:60;left:10px;right:10px;bottom:10px;height:68px;border-radius:24px;background:rgba(8,11,20,.92);border:1px solid rgba(255,255,255,.11);display:flex;align-items:center;justify-content:space-around;backdrop-filter:blur(18px)}
+.nav button{width:19%;height:54px;background:transparent;border-radius:18px;font-size:11px;color:rgba(255,255,255,.64)}
+.nav button strong{display:block;font-size:22px;margin-bottom:2px}.nav button.active{background:rgba(124,92,255,.18);color:#fff}
+.listCard{padding:14px;border-radius:21px;background:var(--glass);border:1px solid var(--line);margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}.grow{flex:1;min-width:0}.muted{color:var(--muted);font-size:13px}
+.action{padding:10px 14px;border-radius:14px;background:linear-gradient(135deg,#7558ff,#00a8dc);font-weight:900}.action:disabled{opacity:.42}
+.worlds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.world{height:130px;padding:13px;border-radius:23px;border:1px solid var(--line);text-align:left;position:relative;overflow:hidden;background:#202a42}
+.world.activeWorld:after{content:"✓";position:absolute;right:10px;top:10px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#4de08b;font-weight:1000}
+.world .wemoji{font-size:38px}.world b{display:block;margin-top:12px}.world small{opacity:.72}
+.shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shopItem{padding:14px;border-radius:22px;background:var(--glass);border:1px solid var(--line)}
+.shopItem .preview{height:82px;border-radius:18px;display:grid;place-items:center;font-size:45px;background:rgba(255,255,255,.06);margin-bottom:10px}
+.shopItem b{display:block}.shopItem small{color:var(--muted)}
+.priceBtn{width:100%;padding:11px;margin-top:10px;border-radius:14px;background:#5d49dd;font-weight:900}
+.collectionTop{display:flex;gap:9px;margin-bottom:12px}
+.collectionTop input{min-width:0;flex:1;border-radius:15px;border:1px solid var(--line);background:var(--glass);color:#fff;padding:12px;font-size:16px;outline:none}
+.collectionTop button{padding:0 14px;border-radius:15px;background:var(--glass);border:1px solid var(--line)}
+.cardsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.collectCard{aspect-ratio:.72;border-radius:17px;padding:8px;border:1px solid rgba(255,255,255,.12);position:relative;overflow:hidden;background:linear-gradient(155deg,#263249,#111624)}
+.collectCard.locked{filter:grayscale(1);opacity:.36}
+.collectCard .cnum{font-size:9px;opacity:.55}.collectCard .animal{font-size:34px;text-align:center;margin-top:8px}.collectCard b{display:block;font-size:10px;line-height:1.15;margin-top:7px}.collectCard small{font-size:8px;opacity:.7}
+.r-common{box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}.r-rare{background:linear-gradient(155deg,#144c70,#111624)}.r-epic{background:linear-gradient(155deg,#542878,#151326)}.r-legend{background:linear-gradient(155deg,#7a4a10,#231608)}.r-mythic{background:linear-gradient(155deg,#7d163e,#2a0e24)}
+.pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0}.pager button{padding:11px 16px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}
+.profileHero{text-align:center;padding:18px}.avatar{width:94px;height:94px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-size:54px;background:radial-gradient(circle,#6d8cff,#27375b);box-shadow:0 0 35px rgba(86,126,255,.35)}
+.nameInput{width:100%;padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--glass);color:#fff;font-size:16px;outline:none;margin:9px 0}
+.achievement.done{border-color:rgba(77,224,139,.5);background:rgba(77,224,139,.08)}
+.achievement .badge{font-size:30px}
+#gameScreen{padding:0;overflow:hidden;background:#111}
+#arena{position:absolute;inset:0;overflow:hidden;background:linear-gradient(160deg,#18243b,#050810)}
+.gameHud{position:absolute;z-index:20;left:10px;right:10px;top:12px;display:flex;gap:7px;justify-content:space-between}
+.gameHud .pill{padding:8px 10px;font-size:13px}
+#catTarget{position:absolute;width:94px;height:94px;border-radius:50%;z-index:10;display:none;cursor:pointer;transition:left .10s cubic-bezier(.2,.8,.2,1),top .10s cubic-bezier(.2,.8,.2,1),width .13s,height .13s,transform .09s;filter:drop-shadow(0 0 13px rgba(100,220,255,.85)) drop-shadow(0 0 35px rgba(92,106,255,.5))}
+#catTarget.jump{transform:scale(.74) rotate(12deg)}
+.orb{position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 33% 26%,#fff 0 6%,#bff7ff 13%,#55d6ff 32%,#705cff 68%,#261a69 100%);box-shadow:inset 0 0 20px rgba(255,255,255,.38),0 0 24px rgba(78,214,255,.85)}
+.ear{position:absolute;top:-6px;width:29px;height:31px;background:linear-gradient(145deg,#96ebff,#665bff);clip-path:polygon(50% 0,100% 100%,0 82%);z-index:-1}.ear.l{left:12px;transform:rotate(-14deg)}.ear.r{right:12px;transform:rotate(14deg)}
+.face{position:absolute;inset:0}.eye{position:absolute;top:37px;width:8px;height:11px;border-radius:50%;background:#10102a;box-shadow:0 0 3px #fff}.eye.l{left:31px}.eye.r{right:31px}.nose{position:absolute;top:53px;left:50%;transform:translateX(-50%);width:8px;height:6px;background:#ff8bad;border-radius:50% 50% 60% 60%}
+.mouth{position:absolute;top:59px;left:50%;width:14px;height:8px;transform:translateX(-50%);border-bottom:2px solid #241236;border-radius:0 0 12px 12px}
+.whisker{position:absolute;top:57px;width:24px;height:1px;background:rgba(27,20,58,.65)}.whisker.w1{left:9px;transform:rotate(8deg)}.whisker.w2{left:8px;top:64px;transform:rotate(-8deg)}.whisker.w3{right:9px;transform:rotate(-8deg)}.whisker.w4{right:8px;top:64px;transform:rotate(8deg)}
+.steam{position:absolute;pointer-events:none;width:15px;height:28px;border-radius:50%;border-left:3px solid rgba(210,249,255,.72);filter:blur(1px);opacity:0;animation:steam 1.25s infinite ease-out}.s1{left:16px;top:-19px}.s2{right:20px;top:-25px;animation-delay:.4s}.s3{left:43px;top:-30px;animation-delay:.75s}
+@keyframes steam{0%{opacity:0;transform:translateY(10px) scale(.65)}30%{opacity:.8}100%{opacity:0;transform:translateY(-22px) translateX(8px) scale(1.35)}}
+#catTarget.golden .orb{background:radial-gradient(circle at 34% 24%,#fff 0 7%,#fff7bd 15%,#ffd23f 42%,#ff8c22 72%,#6d3100 100%);box-shadow:0 0 45px #ffd34d,inset 0 0 20px rgba(255,255,255,.5)}
+#combo{position:absolute;z-index:25;top:75px;left:0;right:0;text-align:center;font-size:27px;font-weight:1000;color:#ffe15c;opacity:0;transform:scale(.65);transition:.15s;pointer-events:none}
+#levelText{position:absolute;z-index:20;left:0;right:0;bottom:88px;text-align:center;font-weight:800;font-size:13px;opacity:.75}
+.powerBar{position:absolute;z-index:30;bottom:18px;left:10px;right:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.powerBar button{height:56px;border-radius:17px;background:rgba(8,11,20,.82);border:1px solid rgba(255,255,255,.13);font-size:20px;backdrop-filter:blur(12px)}.powerBar small{display:block;font-size:9px;color:rgba(255,255,255,.7)}
+#pauseBtn{font-size:18px}
+.overlay{position:absolute;z-index:80;inset:0;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,6,12,.88);backdrop-filter:blur(12px);text-align:center}
+.overlay.show{display:flex}.modal{width:100%;max-width:390px}.modal .big{font-size:70px}.modal h2{font-size:34px;margin:8px 0}.modal p{color:var(--muted);line-height:1.5}
+.modalButtons{display:grid;gap:9px;margin-top:18px}.secondary{padding:14px;border-radius:17px;background:var(--glass);border:1px solid var(--line);font-weight:900}
+.toast{position:absolute;z-index:100;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);padding:11px 16px;border-radius:16px;background:rgba(12,16,29,.95);border:1px solid rgba(255,255,255,.13);opacity:0;pointer-events:none;transition:.2s;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.floatScore{position:absolute;z-index:40;font-size:25px;font-weight:1000;pointer-events:none;animation:fly .65s forwards}@keyframes fly{to{opacity:0;transform:translateY(-70px) scale(1.4)}}
+.spark{position:absolute;z-index:35;width:8px;height:8px;border-radius:50%;background:#fff;pointer-events:none;animation:spark .55s forwards}@keyframes spark{to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.1)}}
+@media(max-width:360px){.brand{font-size:20px}.hero h1{font-size:28px}.cardsGrid{grid-template-columns:repeat(3,1fr)}.pill{font-size:12px}.shopGrid,.worlds{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<div id="game">
-  <div id="top">
-    <div class="box">Очки: <span id="score">0</span></div>
-    <div class="box">❤️ <span id="lives">3</span></div>
-    <div class="box">Рекорд: <span id="record">0</span></div>
+<div id="app">
+  <section id="homeScreen" class="screen active">
+    <div class="topline">
+      <div class="brand">KOT <span>CATCH</span></div>
+      <div class="pill">🪙 <span data-coins>0</span></div>
+    </div>
+    <div class="hero">
+      <h1>Поймай<br>убегающего кота</h1>
+      <p>Он прыгает, светится, мяукает и становится хитрее.</p>
+      <div class="hero-cat">🐱</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b data-best>0</b><small>рекорд</small></div>
+      <div class="stat"><b data-level>1</b><small>уровень</small></div>
+      <div class="stat"><b data-cards>0</b><small>карточек</small></div>
+    </div>
+    <button class="primary" id="playBtn">▶ ИГРАТЬ</button>
+
+    <div class="section-title">Сегодня</div>
+    <div class="grid2">
+      <button class="cardBtn dailyGlow" id="dailyBtn">
+        <span class="emoji">🎁</span><b>Ежедневная награда</b><small id="dailyText">Забрать подарок</small>
+      </button>
+      <button class="cardBtn" id="modeBtn">
+        <span class="emoji">⚡</span><b>Сложность</b><small id="modeText">Нормально</small>
+      </button>
+    </div>
+
+    <div class="section-title">Быстрый доступ</div>
+    <div class="grid2">
+      <button class="cardBtn" data-go="worlds"><span class="emoji">🌌</span><b>Миры</b><small>16 арен открыты</small></button>
+      <button class="cardBtn" data-go="collection"><span class="emoji">🃏</span><b>Коллекция</b><small>1000 карточек</small></button>
+    </div>
+  </section>
+
+  <section id="worldsScreen" class="screen">
+    <div class="topline"><div class="brand">🌍 Миры</div><div class="pill">Все открыты</div></div>
+    <div class="muted">Выбирай любую арену. Каждая меняет атмосферу игры.</div>
+    <div class="worlds" id="worldsGrid"></div>
+  </section>
+
+  <section id="shopScreen" class="screen">
+    <div class="topline"><div class="brand">🛍 Магазин</div><div class="pill">🪙 <span data-coins>0</span></div></div>
+    <div class="section-title">Скины цели</div>
+    <div class="shopGrid" id="skinsGrid"></div>
+    <div class="section-title">Усилители</div>
+    <div class="shopGrid" id="powerShop"></div>
+  </section>
+
+  <section id="collectionScreen" class="screen">
+    <div class="topline"><div class="brand">🃏 1000 карточек</div><div class="pill"><span data-cards>0</span>/1000</div></div>
+    <div class="collectionTop">
+      <input id="cardSearch" placeholder="Поиск: кот, панда, огонь..." autocomplete="off">
+      <button id="filterUnlocked">🔓</button>
+    </div>
+    <div class="cardsGrid" id="cardsGrid"></div>
+    <div class="pager">
+      <button id="prevPage">←</button><span id="pageInfo">1 / 1</span><button id="nextPage">→</button>
+    </div>
+  </section>
+
+  <section id="profileScreen" class="screen">
+    <div class="topline"><div class="brand">👤 Аккаунт</div><div class="pill">LV <span data-level>1</span></div></div>
+    <div class="listCard profileHero">
+      <div class="avatar" id="profileAvatar">🐱</div>
+      <b id="profileNameLabel">Игрок</b>
+      <div class="muted" id="guestIdLabel"></div>
+      <input class="nameInput" id="nicknameInput" maxlength="18" placeholder="Твой ник">
+      <button class="action" id="saveProfile">Сохранить профиль</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="xpText">0</b><small>XP</small></div>
+      <div class="stat"><b id="gamesText">0</b><small>игр</small></div>
+      <div class="stat"><b id="hitsText">0</b><small>попаданий</small></div>
+    </div>
+    <div class="section-title">Достижения</div>
+    <div id="achievementsList"></div>
+    <div class="section-title">Настройки</div>
+    <div class="listCard">
+      <div class="row"><div class="grow"><b>Звуки котика</b><div class="muted">Мяу, комбо и награды</div></div><button class="action" id="soundToggle">ВКЛ</button></div>
+    </div>
+    <div class="listCard">
+      <div class="row"><div class="grow"><b>Вибрация</b><div class="muted">Отклик при попадании</div></div><button class="action" id="vibrateToggle">ВКЛ</button></div>
+    </div>
+    <div class="listCard">
+      <div class="row"><div class="grow"><b>Облачный аккаунт</b><div class="muted">Локальный профиль уже работает. Облачная синхронизация потребует сервер входа.</div></div><span>☁️</span></div>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div id="arena">
+      <div class="gameHud">
+        <div class="pill">⭐ <span id="gameScore">0</span></div>
+        <div class="pill">❤️ <span id="gameLives">3</span></div>
+        <div class="pill">🪙 +<span id="runCoins">0</span></div>
+        <button class="pill" id="pauseBtn">Ⅱ</button>
+      </div>
+      <div id="combo"></div>
+      <div id="catTarget">
+        <span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>
+        <div class="ear l"></div><div class="ear r"></div>
+        <div class="orb"></div>
+        <div class="face">
+          <div class="eye l"></div><div class="eye r"></div><div class="nose"></div><div class="mouth"></div>
+          <div class="whisker w1"></div><div class="whisker w2"></div><div class="whisker w3"></div><div class="whisker w4"></div>
+        </div>
+      </div>
+      <div id="levelText">Уровень 1</div>
+      <div class="powerBar">
+        <button id="freezeBtn">❄️<small>Заморозка <span id="freezeCount">0</span></small></button>
+        <button id="shieldBtn">🛡️<small>Щит <span id="shieldCount">0</span></small></button>
+        <button id="doubleBtn">×2<small>Очки <span id="doubleCount">0</span></small></button>
+        <button id="quitBtn">✕<small>Выйти</small></button>
+      </div>
+    </div>
+  </section>
+
+  <nav class="nav" id="nav">
+    <button class="active" data-screen="home"><strong>🏠</strong>Главная</button>
+    <button data-screen="worlds"><strong>🌌</strong>Миры</button>
+    <button data-screen="shop"><strong>🛍️</strong>Магазин</button>
+    <button data-screen="collection"><strong>🃏</strong>Карты</button>
+    <button data-screen="profile"><strong>👤</strong>Профиль</button>
+  </nav>
+
+  <div class="overlay" id="modeOverlay">
+    <div class="modal">
+      <div class="big">⚡</div><h2>Сложность</h2>
+      <div class="modalButtons" id="modeChoices"></div>
+      <button class="secondary" id="closeMode">Закрыть</button>
+    </div>
   </div>
 
-  <div id="combo"></div>
-  <div id="target"></div>
-  <div id="level">Уровень 1 · прыжок 0.55 сек</div>
-
-  <div id="startScreen" class="screen">
-    <div class="logo">🎯</div>
-    <h1>ЛОВИ ЦЕЛЬ</h1>
-    <p>Теперь цель сама убегает по экрану. Лови её до того, как закончится время. Чем выше уровень — тем быстрее она прыгает и тем меньше становится.</p>
-    <button onclick="startGame()">ИГРАТЬ</button>
+  <div class="overlay" id="pauseOverlay">
+    <div class="modal"><div class="big">🐾</div><h2>Пауза</h2><p>Котик тоже отдыхает.</p><div class="modalButtons"><button class="primary" id="resumeBtn">Продолжить</button><button class="secondary" id="pauseExitBtn">В меню</button></div></div>
   </div>
 
-  <div id="gameOver" class="screen">
-    <div class="logo">💥</div>
-    <h1>КОНЕЦ</h1>
-    <p>Результат: <b id="finalScore">0</b><br>Лучший рекорд: <b id="finalRecord">0</b></p>
-    <button onclick="startGame()">ЕЩЁ РАЗ</button>
+  <div class="overlay" id="resultOverlay">
+    <div class="modal"><div class="big" id="resultEmoji">😺</div><h2 id="resultTitle">Отлично!</h2><p id="resultText"></p><div class="modalButtons"><button class="primary" id="againBtn">Ещё раз</button><button class="secondary" id="resultHomeBtn">В меню</button></div></div>
   </div>
+
+  <div class="toast" id="toast"></div>
 </div>
 
 <script>
-const game=document.getElementById("game");
-const target=document.getElementById("target");
-const scoreText=document.getElementById("score");
-const livesText=document.getElementById("lives");
-const recordText=document.getElementById("record");
-const comboText=document.getElementById("combo");
-const levelText=document.getElementById("level");
-const startScreen=document.getElementById("startScreen");
-const gameOverScreen=document.getElementById("gameOver");
+(function(){
+  const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+  const key="kotCatchV2";
+  const defaultState={
+    coins:250,best:0,xp:0,games:0,totalHits:0,maxCombo:0,
+    nickname:"Игрок",guestId:"KOT-"+Math.random().toString(36).slice(2,8).toUpperCase(),
+    sound:true,vibrate:true,world:0,mode:"normal",skin:"cat",
+    ownedSkins:["cat"],cards:[0,1,2,3,4,5],lastDaily:"",
+    powers:{freeze:2,shield:1,double:1},worldsPlayed:{},achievements:{}
+  };
+  let state;
+  try{state=Object.assign({},defaultState,JSON.parse(localStorage.getItem(key)||"{}"));}catch(e){state=defaultState}
+  state.powers=Object.assign({},defaultState.powers,state.powers||{});
+  state.worldsPlayed=state.worldsPlayed||{};
+  state.achievements=state.achievements||{};
+  state.ownedSkins=state.ownedSkins||["cat"];
+  state.cards=Array.from(new Set((state.cards||[]).map(Number))).filter(n=>n>=0&&n<1000);
 
-let score=0,lives=3,combo=0,running=false;
-let targetSize=92;
-let roundTime=2200;
-let jumpInterval=550;
-let missTimer=null;
-let jumpTimer=null;
+  const worlds=[
+    ["Неоновый город","🌃","linear-gradient(155deg,#17184a,#09122a 55%,#071018)"],
+    ["Космос","🪐","radial-gradient(circle at 30% 20%,#39408f,#15133d 35%,#050611 75%)"],
+    ["Ледяной мир","❄️","linear-gradient(160deg,#bff3ff,#367ea7 45%,#0d304d)"],
+    ["Огненная долина","🌋","radial-gradient(circle at 50% 90%,#ff7d20,#6e190f 35%,#19080a 75%)"],
+    ["Магический лес","🌲","linear-gradient(160deg,#245b42,#102b2c 50%,#071518)"],
+    ["Япония","🌸","linear-gradient(160deg,#7c355d,#2c2448 50%,#101225)"],
+    ["Облака","☁️","linear-gradient(160deg,#8ed8ff,#7092e8 50%,#384f91)"],
+    ["Золотой храм","🏯","linear-gradient(160deg,#7b581c,#362616 55%,#15100a)"],
+    ["Пляж","🏝️","linear-gradient(160deg,#35a9c8,#2d7f9b 48%,#c69a55)"],
+    ["Пустыня","🏜️","linear-gradient(160deg,#c98a45,#8b4f31 55%,#3b2020)"],
+    ["Киберпанк","🤖","linear-gradient(160deg,#391457,#171341 45%,#07131d)"],
+    ["Лунная ночь","🌙","radial-gradient(circle at 75% 15%,#b9d7ff,#263b68 12%,#0b1530 46%,#050812)"],
+    ["Джунгли","🦜","linear-gradient(160deg,#2a6d3b,#123b2a 50%,#071b13)"],
+    ["Подводный мир","🐠","linear-gradient(160deg,#127a9f,#0d496e 50%,#06233e)"],
+    ["Замок теней","🏰","linear-gradient(160deg,#383044,#1f1b2b 50%,#08070e)"],
+    ["Радужный мир","🌈","linear-gradient(145deg,#71377d,#3166a2 38%,#2d7c74 70%,#785c2a)"]
+  ];
 
-let record=Number(localStorage.getItem("catchRecord"))||0;
-recordText.textContent=record;
+  const modes={
+    easy:{name:"Легко",emoji:"😺",jump:700,round:2800,size:104,coin:1},
+    normal:{name:"Нормально",emoji:"🐱",jump:540,round:2250,size:94,coin:1},
+    hard:{name:"Хард",emoji:"😼",jump:400,round:1800,size:86,coin:2},
+    insane:{name:"Безумие",emoji:"🙀",jump:285,round:1400,size:80,coin:3}
+  };
 
-function clearGameTimers(){
-  clearTimeout(missTimer);
-  clearTimeout(jumpTimer);
-  missTimer=null;
-  jumpTimer=null;
-}
+  const skins=[
+    {id:"cat",name:"Неоновый кот",emoji:"🐱",price:0},
+    {id:"tiger",name:"Тигр",emoji:"🐯",price:450},
+    {id:"fox",name:"Лиса",emoji:"🦊",price:500},
+    {id:"panda",name:"Панда",emoji:"🐼",price:550},
+    {id:"rabbit",name:"Заяц",emoji:"🐰",price:600},
+    {id:"lion",name:"Лев",emoji:"🦁",price:750},
+    {id:"wolf",name:"Волк",emoji:"🐺",price:850},
+    {id:"dragon",name:"Дракон",emoji:"🐲",price:1200},
+    {id:"alien",name:"Космо-кот",emoji:"👽",price:1500},
+    {id:"ghost",name:"Призрак",emoji:"👻",price:1700},
+    {id:"crown",name:"Королевский кот",emoji:"👑",price:2200},
+    {id:"diamond",name:"Алмазный кот",emoji:"💎",price:3000}
+  ];
 
-function startGame(){
-  clearGameTimers();
-  score=0;
-  lives=3;
-  combo=0;
-  targetSize=92;
-  roundTime=2200;
-  jumpInterval=550;
-  running=true;
+  const animals=[
+    ["Кот","🐱"],["Тигр","🐯"],["Лиса","🦊"],["Панда","🐼"],["Заяц","🐰"],
+    ["Лев","🦁"],["Волк","🐺"],["Собака","🐶"],["Енот","🦝"],["Медведь","🐻"],
+    ["Коала","🐨"],["Обезьяна","🐵"],["Лягушка","🐸"],["Пингвин","🐧"],["Сова","🦉"],
+    ["Орёл","🦅"],["Единорог","🦄"],["Дракон","🐲"],["Хомяк","🐹"],["Мышь","🐭"]
+  ];
+  const elements=["Неон","Огонь","Лёд","Космос","Тень","Золото","Луна","Молния","Лес","Радуга"];
+  const forms=["Страж","Охотник","Маг","Самурай","Ниндзя"];
+  function rarityFor(i){
+    const n=(i*37+17)%100;
+    if(n<3)return["mythic","Мифическая"];
+    if(n<10)return["legend","Легендарная"];
+    if(n<24)return["epic","Эпическая"];
+    if(n<49)return["rare","Редкая"];
+    return["common","Обычная"];
+  }
+  const allCards=Array.from({length:1000},(_,i)=>{
+    const a=animals[i%animals.length], el=elements[Math.floor(i/animals.length)%elements.length], form=forms[Math.floor(i/(animals.length*elements.length))%forms.length], rr=rarityFor(i);
+    return{id:i,name:el+" "+a[0]+" — "+form,emoji:a[1],element:el,rarity:rr[0],rarityName:rr[1]};
+  });
 
-  scoreText.textContent="0";
-  livesText.textContent="3";
-  updateDifficultyLabel(1);
+  const achievements=[
+    {id:"hit10",emoji:"🐾",name:"Первые лапки",desc:"10 попаданий",ok:s=>s.totalHits>=10},
+    {id:"hit100",emoji:"🎯",name:"Охотник",desc:"100 попаданий",ok:s=>s.totalHits>=100},
+    {id:"best50",emoji:"🔥",name:"Горячая лапа",desc:"Рекорд 50",ok:s=>s.best>=50},
+    {id:"combo10",emoji:"⚡",name:"Комбо-мастер",desc:"Комбо ×10",ok:s=>s.maxCombo>=10},
+    {id:"coins1000",emoji:"🪙",name:"Копилка",desc:"Накопить 1000 монет",ok:s=>s.coins>=1000},
+    {id:"cards25",emoji:"🃏",name:"Коллекционер",desc:"25 карточек",ok:s=>s.cards.length>=25},
+    {id:"maps5",emoji:"🌌",name:"Путешественник",desc:"Сыграть в 5 мирах",ok:s=>Object.keys(s.worldsPlayed).length>=5}
+  ];
 
-  startScreen.style.display="none";
-  gameOverScreen.style.display="none";
-  target.style.display="block";
+  function save(){localStorage.setItem(key,JSON.stringify(state));refreshAll()}
+  function level(){return Math.max(1,Math.floor(state.xp/100)+1)}
+  function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove("show"),1800)}
+  function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+  function vibrate(ms){if(state.vibrate&&navigator.vibrate)navigator.vibrate(ms)}
+  let audioCtx=null;
+  function ctx(){if(!audioCtx)try{audioCtx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){};if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();return audioCtx}
+  function meow(pitch){
+    if(!state.sound)return;
+    const c=ctx();if(!c)return;
+    const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();
+    const t=c.currentTime,p=pitch||1;
+    o.type="triangle";f.type="lowpass";f.frequency.setValueAtTime(1500,c.currentTime);
+    o.frequency.setValueAtTime(430*p,t);o.frequency.exponentialRampToValueAtTime(720*p,t+.09);o.frequency.exponentialRampToValueAtTime(330*p,t+.38);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.19,t+.035);g.gain.exponentialRampToValueAtTime(.055,t+.18);g.gain.exponentialRampToValueAtTime(.0001,t+.42);
+    o.connect(f);f.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45);
+  }
+  function rewardSound(){
+    if(!state.sound)return;const c=ctx();if(!c)return;
+    [0,100,210].forEach((x,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.08;o.frequency.value=520+x;g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.12,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.17)});
+  }
 
-  startRound();
-}
+  function refreshAll(){
+    $$("[data-coins]").forEach(e=>e.textContent=state.coins);
+    $$("[data-best]").forEach(e=>e.textContent=state.best);
+    $$("[data-level]").forEach(e=>e.textContent=level());
+    $$("[data-cards]").forEach(e=>e.textContent=state.cards.length);
+    $("#profileNameLabel").textContent=state.nickname;
+    $("#nicknameInput").value=state.nickname;
+    $("#guestIdLabel").textContent=state.guestId+" · локальный профиль";
+    $("#xpText").textContent=state.xp;
+    $("#gamesText").textContent=state.games;
+    $("#hitsText").textContent=state.totalHits;
+    $("#soundToggle").textContent=state.sound?"ВКЛ":"ВЫКЛ";
+    $("#vibrateToggle").textContent=state.vibrate?"ВКЛ":"ВЫКЛ";
+    $("#modeText").textContent=modes[state.mode].name;
+    $("#dailyText").textContent=state.lastDaily===today()?"Уже получено":"Забрать 150 🪙 + карточку";
+    renderWorlds();renderShop();renderCards();renderAchievements();
+  }
 
-function startRound(){
-  if(!running)return;
-  clearGameTimers();
-  moveTarget(true);
+  const screens=["home","worlds","shop","collection","profile","game"];
+  function showScreen(name){
+    screens.forEach(n=>$("#"+n+"Screen").classList.toggle("active",n===name));
+    $("#nav").style.display=name==="game"?"none":"flex";
+    $$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.screen===name));
+    if(name==="collection")renderCards();
+  }
 
-  missTimer=setTimeout(()=>{
-    if(!running)return;
-    loseLife();
-  },roundTime);
+  $$("#nav button").forEach(b=>b.addEventListener("click",()=>showScreen(b.dataset.screen)));
+  $$("[data-go]").forEach(b=>b.addEventListener("click",()=>showScreen(b.dataset.go)));
 
-  scheduleJump();
-}
+  function renderWorlds(){
+    $("#worldsGrid").innerHTML=worlds.map((w,i)=>'<button class="world '+(state.world===i?'activeWorld':'')+'" data-world="'+i+'" style="background:'+w[2]+'"><span class="wemoji">'+w[1]+'</span><b>'+w[0]+'</b><small>Арена '+(i+1)+'</small></button>').join("");
+    $$("#worldsGrid [data-world]").forEach(b=>b.addEventListener("click",()=>{state.world=Number(b.dataset.world);save();toast("Выбран мир: "+worlds[state.world][0])}));
+  }
 
-function scheduleJump(){
-  clearTimeout(jumpTimer);
-  if(!running)return;
+  function renderShop(){
+    $("#skinsGrid").innerHTML=skins.map(s=>{
+      const owned=state.ownedSkins.includes(s.id),active=state.skin===s.id;
+      return '<div class="shopItem"><div class="preview">'+s.emoji+'</div><b>'+s.name+'</b><small>'+(active?'Используется':owned?'Куплено':'Скин цели')+'</small><button class="priceBtn" data-skin="'+s.id+'">'+(active?'✓ Выбран':owned?'Выбрать':'🪙 '+s.price)+'</button></div>';
+    }).join("");
+    $$("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
+    const p=[["freeze","❄️","Заморозка","Котик стоит 3 секунды",90],["shield","🛡️","Щит","Защищает от одного промаха",110],["double","×2","Двойные очки","10 секунд ×2 очков",130]];
+    $("#powerShop").innerHTML=p.map(x=>'<div class="shopItem"><div class="preview">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' · есть '+state.powers[x[0]]+'</small><button class="priceBtn" data-power="'+x[0]+'">🪙 '+x[4]+'</button></div>').join("");
+    $$("#powerShop [data-power]").forEach(b=>b.addEventListener("click",()=>buyPower(b.dataset.power)));
+  }
+  function buySkin(id){
+    const s=skins.find(x=>x.id===id);if(!s)return;
+    if(state.ownedSkins.includes(id)){state.skin=id;save();meow(1.08);toast("Скин выбран");return}
+    if(state.coins<s.price){toast("Не хватает монет");return}
+    state.coins-=s.price;state.ownedSkins.push(id);state.skin=id;save();rewardSound();toast("Новый скин открыт!");
+  }
+  function buyPower(id){
+    const prices={freeze:90,shield:110,double:130},p=prices[id];
+    if(state.coins<p){toast("Не хватает монет");return}
+    state.coins-=p;state.powers[id]=(state.powers[id]||0)+1;save();rewardSound();toast("Усилитель куплен");
+  }
 
-  const variation=Math.floor(Math.random()*120)-60;
-  const delay=Math.max(140,jumpInterval+variation);
+  let cardPage=0,onlyUnlocked=false;
+  function cardResults(){
+    const q=$("#cardSearch").value.trim().toLowerCase();
+    return allCards.filter(c=>(!onlyUnlocked||state.cards.includes(c.id))&&(!q||(c.name+" "+c.rarityName).toLowerCase().includes(q)));
+  }
+  function renderCards(){
+    if(!$("#cardsGrid"))return;
+    const arr=cardResults(),per=30,pages=Math.max(1,Math.ceil(arr.length/per));cardPage=Math.min(cardPage,pages-1);
+    const slice=arr.slice(cardPage*per,(cardPage+1)*per);
+    $("#cardsGrid").innerHTML=slice.map(c=>{
+      const unlocked=state.cards.includes(c.id);
+      return '<div class="collectCard r-'+c.rarity+' '+(unlocked?'':'locked')+'"><div class="cnum">#'+String(c.id+1).padStart(4,"0")+'</div><div class="animal">'+(unlocked?c.emoji:"❓")+'</div><b>'+(unlocked?c.name:"Не открыта")+'</b><small>'+(unlocked?c.rarityName:"???")+'</small></div>';
+    }).join("");
+    $("#pageInfo").textContent=(cardPage+1)+" / "+pages;
+    $("#filterUnlocked").textContent=onlyUnlocked?"✅":"🔓";
+  }
+  $("#cardSearch").addEventListener("input",()=>{cardPage=0;renderCards()});
+  $("#filterUnlocked").addEventListener("click",()=>{onlyUnlocked=!onlyUnlocked;cardPage=0;renderCards()});
+  $("#prevPage").addEventListener("click",()=>{if(cardPage>0){cardPage--;renderCards()}});
+  $("#nextPage").addEventListener("click",()=>{const pages=Math.ceil(cardResults().length/30);if(cardPage<pages-1){cardPage++;renderCards()}});
 
-  jumpTimer=setTimeout(()=>{
-    if(!running)return;
-    moveTarget(false);
-    scheduleJump();
-  },delay);
-}
+  function unlockRandomCard(){
+    if(state.cards.length>=1000)return null;
+    let id;do{id=Math.floor(Math.random()*1000)}while(state.cards.includes(id));
+    state.cards.push(id);return allCards[id];
+  }
 
-function moveTarget(firstMove){
-  target.style.width=targetSize+"px";
-  target.style.height=targetSize+"px";
+  function renderAchievements(){
+    achievements.forEach(a=>{if(a.ok(state))state.achievements[a.id]=true});
+    $("#achievementsList").innerHTML=achievements.map(a=>{
+      const d=!!state.achievements[a.id];
+      return '<div class="listCard achievement '+(d?'done':'')+'"><div class="row"><div class="badge">'+a.emoji+'</div><div class="grow"><b>'+a.name+'</b><div class="muted">'+a.desc+'</div></div><div>'+(d?'✅':'🔒')+'</div></div></div>';
+    }).join("");
+  }
 
-  const pad=14;
-  const top=105;
-  const bottom=50;
-  const maxX=Math.max(pad,innerWidth-targetSize-pad);
-  const maxY=Math.max(top,innerHeight-targetSize-bottom);
+  $("#dailyBtn").addEventListener("click",()=>{
+    if(state.lastDaily===today()){toast("Сегодня награда уже получена");return}
+    state.lastDaily=today();state.coins+=150;state.powers.freeze++;const card=unlockRandomCard();save();rewardSound();toast(card?"+150 монет · новая карточка!":"+150 монет");
+  });
 
-  let x=pad+Math.random()*Math.max(1,maxX-pad);
-  let y=top+Math.random()*Math.max(1,maxY-top);
+  $("#saveProfile").addEventListener("click",()=>{
+    const n=$("#nicknameInput").value.trim().slice(0,18);state.nickname=n||"Игрок";save();toast("Профиль сохранён");
+  });
+  $("#soundToggle").addEventListener("click",()=>{state.sound=!state.sound;save();if(state.sound)meow(1)});
+  $("#vibrateToggle").addEventListener("click",()=>{state.vibrate=!state.vibrate;save();vibrate(30)});
 
-  if(!firstMove){
-    const oldX=parseFloat(target.style.left)||0;
-    const oldY=parseFloat(target.style.top)||top;
+  $("#modeBtn").addEventListener("click",()=>$("#modeOverlay").classList.add("show"));
+  $("#closeMode").addEventListener("click",()=>$("#modeOverlay").classList.remove("show"));
+  $("#modeChoices").innerHTML=Object.keys(modes).map(k=>'<button class="secondary" data-mode="'+k+'">'+modes[k].emoji+' '+modes[k].name+'</button>').join("");
+  $$("#modeChoices [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();$("#modeOverlay").classList.remove("show");toast("Сложность: "+modes[state.mode].name)}));
 
-    for(let tries=0;tries<5;tries++){
-      const dx=Math.abs(x-oldX);
-      const dy=Math.abs(y-oldY);
-      if(dx>targetSize*1.6 || dy>targetSize*1.6)break;
-      x=pad+Math.random()*Math.max(1,maxX-pad);
-      y=top+Math.random()*Math.max(1,maxY-top);
+  let score=0,lives=3,combo=0,runCoins=0,running=false,paused=false;
+  let targetSize=94,jumpInterval=540,roundTime=2250,jumpTimer=null,missTimer=null;
+  let frozenUntil=0,shieldActive=false,doubleUntil=0,golden=false,gameLevel=1;
+
+  function clearTimers(){clearTimeout(jumpTimer);clearTimeout(missTimer);jumpTimer=null;missTimer=null}
+  function updateGameHud(){
+    $("#gameScore").textContent=score;$("#gameLives").textContent=lives;$("#runCoins").textContent=runCoins;
+    $("#freezeCount").textContent=state.powers.freeze||0;$("#shieldCount").textContent=state.powers.shield||0;$("#doubleCount").textContent=state.powers.double||0;
+    $("#shieldBtn").style.outline=shieldActive?"2px solid #75ffb1":"none";
+  }
+  function applyWorld(){
+    $("#arena").style.background=worlds[state.world][2];
+  }
+  function applySkin(){
+    const s=skins.find(x=>x.id===state.skin)||skins[0];
+    const face=$("#catTarget .face"),ears=$$("#catTarget .ear"),orb=$("#catTarget .orb");
+    face.style.display=state.skin==="cat"||state.skin==="crown"||state.skin==="diamond"?"block":"none";
+    ears.forEach(e=>e.style.display=face.style.display);
+    if(face.style.display==="none"){
+      orb.textContent=s.emoji;orb.style.display="grid";orb.style.placeItems="center";orb.style.fontSize="48px";
+    }else{
+      orb.textContent="";orb.style.display="block";orb.style.fontSize="";
     }
+  }
+  function startGame(){
+    ctx();clearTimers();score=0;lives=3;combo=0;runCoins=0;running=true;paused=false;shieldActive=false;doubleUntil=0;
+    const m=modes[state.mode];targetSize=m.size;jumpInterval=m.jump;roundTime=m.round;gameLevel=1;
+    state.worldsPlayed[state.world]=true;
+    applyWorld();applySkin();showScreen("game");$("#resultOverlay").classList.remove("show");$("#pauseOverlay").classList.remove("show");$("#catTarget").style.display="block";
+    updateGameHud();startRound();meow(.92);
+  }
+  $("#playBtn").addEventListener("click",startGame);
+  $("#againBtn").addEventListener("click",startGame);
 
-    target.classList.add("jump");
-    setTimeout(()=>target.classList.remove("jump"),85);
+  function moveTarget(first){
+    if(!running||paused||Date.now()<frozenUntil)return;
+    const t=$("#catTarget"),pad=12,top=80,bottom=92;
+    t.style.width=targetSize+"px";t.style.height=targetSize+"px";
+    const maxX=Math.max(pad,innerWidth-targetSize-pad),maxY=Math.max(top,innerHeight-targetSize-bottom);
+    let x=pad+Math.random()*Math.max(1,maxX-pad),y=top+Math.random()*Math.max(1,maxY-top);
+    if(!first){
+      const ox=parseFloat(t.style.left)||0,oy=parseFloat(t.style.top)||top;
+      for(let n=0;n<6;n++){if(Math.abs(x-ox)>targetSize*1.5||Math.abs(y-oy)>targetSize*1.5)break;x=pad+Math.random()*Math.max(1,maxX-pad);y=top+Math.random()*Math.max(1,maxY-top)}
+      t.classList.add("jump");setTimeout(()=>t.classList.remove("jump"),90);
+    }
+    t.style.left=x+"px";t.style.top=y+"px";
+  }
+  function scheduleJump(){
+    clearTimeout(jumpTimer);if(!running||paused)return;
+    const wait=Math.max(130,jumpInterval+(Math.random()*100-50));
+    jumpTimer=setTimeout(()=>{
+      if(Date.now()<frozenUntil){scheduleJump();return}
+      moveTarget(false);scheduleJump();
+    },wait);
+  }
+  function startRound(){
+    if(!running)return;clearTimers();golden=Math.random()<.085;$("#catTarget").classList.toggle("golden",golden);moveTarget(true);
+    missTimer=setTimeout(()=>miss(),roundTime);scheduleJump();
+  }
+  function miss(){
+    if(!running||paused)return;clearTimers();combo=0;
+    if(shieldActive){shieldActive=false;vibrate(55);toast("Щит спас жизнь!");updateGameHud();startRound();return}
+    lives--;vibrate(80);updateGameHud();if(lives<=0)endGame();else startRound();
+  }
+  $("#catTarget").addEventListener("pointerdown",e=>{
+    if(!running||paused)return;e.stopPropagation();clearTimers();combo++;state.totalHits++;
+    const mult=Date.now()<doubleUntil?2:1,base=1+Math.floor(combo/5),points=base*mult;score+=points;
+    const coinGain=modes[state.mode].coin*(golden?10:1);runCoins+=coinGain;
+    state.maxCombo=Math.max(state.maxCombo,combo);
+    burst(e.clientX,e.clientY,golden);floatScore(e.clientX,e.clientY,"+"+points+(golden?" ✨":""));
+    vibrate(golden?45:18);meow(golden?1.35:(.9+Math.random()*.22));
+    if(golden){const card=unlockRandomCard();if(card)toast("Золотой кот! Открыта: "+card.name)}
+    if(combo>=3){$("#combo").textContent="🔥 КОМБО x"+combo;$("#combo").style.opacity=1;$("#combo").style.transform="scale(1)";setTimeout(()=>$("#combo").style.opacity=0,320)}
+    gameLevel=1+Math.floor(score/10);
+    const m=modes[state.mode];targetSize=Math.max(34,m.size-(gameLevel-1)*3.2);jumpInterval=Math.max(145,m.jump-(gameLevel-1)*24);roundTime=Math.max(850,m.round-(gameLevel-1)*70);
+    $("#levelText").textContent="Уровень "+gameLevel+" · прыжок "+(jumpInterval/1000).toFixed(2)+" сек";
+    updateGameHud();startRound();
+  });
+  $("#arena").addEventListener("pointerdown",e=>{if(!running||paused||e.target.closest("#catTarget")||e.target.closest(".powerBar")||e.target.closest(".gameHud"))return;miss()});
+
+  function floatScore(x,y,text){const d=document.createElement("div");d.className="floatScore";d.textContent=text;d.style.left=x+"px";d.style.top=y+"px";$("#arena").appendChild(d);setTimeout(()=>d.remove(),680)}
+  function burst(x,y,gold){
+    for(let i=0;i<10;i++){const s=document.createElement("div");s.className="spark";s.style.left=x+"px";s.style.top=y+"px";s.style.background=gold?"#ffd34d":(i%2?"#78e6ff":"#9b80ff");const a=Math.random()*Math.PI*2,r=25+Math.random()*45;s.style.setProperty("--dx",Math.cos(a)*r+"px");s.style.setProperty("--dy",Math.sin(a)*r+"px");$("#arena").appendChild(s);setTimeout(()=>s.remove(),600)}
   }
 
-  target.style.left=x+"px";
-  target.style.top=y+"px";
-}
+  $("#freezeBtn").addEventListener("click",e=>{e.stopPropagation();if(!running||paused||state.powers.freeze<=0)return toast("Заморозки закончились");state.powers.freeze--;frozenUntil=Date.now()+3000;save();updateGameHud();toast("❄️ Котик заморожен на 3 секунды")});
+  $("#shieldBtn").addEventListener("click",e=>{e.stopPropagation();if(!running||paused)return;if(shieldActive)return toast("Щит уже включён");if(state.powers.shield<=0)return toast("Щитов нет");state.powers.shield--;shieldActive=true;save();updateGameHud();toast("🛡️ Щит активирован")});
+  $("#doubleBtn").addEventListener("click",e=>{e.stopPropagation();if(!running||paused||state.powers.double<=0)return toast("×2 закончились");state.powers.double--;doubleUntil=Date.now()+10000;save();updateGameHud();toast("×2 очков на 10 секунд")});
 
-function loseLife(){
-  if(!running)return;
+  function pauseGame(){if(!running)return;paused=true;clearTimers();$("#pauseOverlay").classList.add("show")}
+  function resumeGame(){if(!running)return;paused=false;$("#pauseOverlay").classList.remove("show");startRound()}
+  $("#pauseBtn").addEventListener("click",e=>{e.stopPropagation();pauseGame()});
+  $("#resumeBtn").addEventListener("click",resumeGame);
+  $("#pauseExitBtn").addEventListener("click",()=>{running=false;clearTimers();$("#pauseOverlay").classList.remove("show");$("#catTarget").style.display="none";showScreen("home")});
+  $("#quitBtn").addEventListener("click",e=>{e.stopPropagation();pauseGame()});
 
-  clearGameTimers();
-  combo=0;
-  lives--;
-  livesText.textContent=lives;
-
-  if(navigator.vibrate)navigator.vibrate(80);
-
-  if(lives<=0){
-    endGame();
-  }else{
-    startRound();
+  function endGame(){
+    running=false;clearTimers();$("#catTarget").style.display="none";
+    state.games++;state.coins+=runCoins;state.xp+=Math.max(5,score);const oldBest=state.best;if(score>state.best)state.best=score;
+    let bonusCard=null;if(score>=10&&Math.random()<Math.min(.8,.25+score/150))bonusCard=unlockRandomCard();
+    achievements.forEach(a=>{if(a.ok(state))state.achievements[a.id]=true});
+    save();rewardSound();
+    $("#resultEmoji").textContent=score>oldBest&&score>0?"🏆":"😺";
+    $("#resultTitle").textContent=score>oldBest&&score>0?"Новый рекорд!":"Забег окончен";
+    $("#resultText").innerHTML="Очки: <b>"+score+"</b><br>Монеты: <b>+"+runCoins+"</b><br>XP: <b>+"+Math.max(5,score)+"</b>"+(bonusCard?"<br>🃏 Новая карточка: <b>"+bonusCard.name+"</b>":"");
+    $("#resultOverlay").classList.add("show");
   }
-}
+  $("#resultHomeBtn").addEventListener("click",()=>{$("#resultOverlay").classList.remove("show");showScreen("home")});
 
-function updateDifficulty(){
-  const level=1+Math.floor(score/10);
-
-  targetSize=Math.max(34,92-(level-1)*4);
-  jumpInterval=Math.max(170,550-(level-1)*32);
-  roundTime=Math.max(850,2200-(level-1)*90);
-
-  updateDifficultyLabel(level);
-}
-
-function updateDifficultyLabel(level){
-  levelText.textContent="Уровень "+level+" · прыжок "+(jumpInterval/1000).toFixed(2)+" сек";
-}
-
-target.addEventListener("pointerdown",e=>{
-  if(!running)return;
-
-  e.stopPropagation();
-  clearGameTimers();
-  combo++;
-
-  const bonus=1+Math.floor(combo/5);
-  score+=bonus;
-  scoreText.textContent=score;
-
-  showFloatingScore(e.clientX,e.clientY,"+"+bonus);
-
-  if(navigator.vibrate)navigator.vibrate(18);
-
-  if(combo>=3){
-    comboText.textContent="🔥 КОМБО x"+combo;
-    comboText.style.opacity=1;
-    comboText.style.transform="scale(1)";
-    setTimeout(()=>comboText.style.opacity=0,330);
-  }
-
-  game.classList.remove("flash");
-  void game.offsetWidth;
-  game.classList.add("flash");
-
-  updateDifficulty();
-  startRound();
-});
-
-game.addEventListener("pointerdown",e=>{
-  if(!running || e.target===target || e.target.tagName==="BUTTON")return;
-  loseLife();
-});
-
-function showFloatingScore(x,y,text){
-  const el=document.createElement("div");
-  el.className="floatScore";
-  el.textContent=text;
-  el.style.left=x+"px";
-  el.style.top=y+"px";
-  game.appendChild(el);
-  setTimeout(()=>el.remove(),600);
-}
-
-function endGame(){
-  running=false;
-  clearGameTimers();
-  target.style.display="none";
-
-  if(score>record){
-    record=score;
-    localStorage.setItem("catchRecord",record);
-  }
-
-  recordText.textContent=record;
-  document.getElementById("finalScore").textContent=score;
-  document.getElementById("finalRecord").textContent=record;
-  gameOverScreen.style.display="flex";
-}
+  refreshAll();
+})();
 </script>
 </body>
 </html>
