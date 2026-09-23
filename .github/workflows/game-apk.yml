@@ -29,7 +29,7 @@ jobs:
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
 
       - name: Android SDK packages
         shell: bash
@@ -39,7 +39,7 @@ jobs:
             SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Restore stable game signing key
         uses: actions/cache@v4
@@ -56,14 +56,14 @@ jobs:
           fi
 
       - name: Build APK
-        run: gradle -p simple-game :app:assembleDebug --no-daemon
+        run: gradle -p simple-game :app:assembleDebug :app:bundleDebug --no-daemon
 
       - name: Prepare APK
-        run: cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.1.apk
+        run: cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.2.apk\n          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.2-test.aab
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: kot-catch-v2-1-apk
-          path: simple-game/KOT-Catch-v2.1.apk
+          name: kot-catch-v2-2-build
+          path: |\n            simple-game/KOT-Catch-v2.2.apk\n            simple-game/KOT-Catch-v2.2-test.aab
           retention-days: 7
