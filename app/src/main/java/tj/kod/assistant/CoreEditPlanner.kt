@@ -11,7 +11,7 @@ object CoreEditPlanner {
         Regex("""[A-Za-z0-9_./-]+\.(?:kt|kts|xml|yml|yaml|md|mjs|json)""")
             .findAll(instruction)
             .map { it.value }
-            .filter { '/' in it.value || it.value.endsWith(".kt") }
+            .filter { '/' in it || it.endsWith(".kt") }
             .forEach { raw ->
                 val path = if ('/' in raw) {
                     raw
