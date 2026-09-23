@@ -526,11 +526,55 @@ fun KotTaskScreen(
             "video" -> {
                 item {
                     Text(
-                        "Офлайн-видео требует установленной локальной видео-модели и достаточно памяти/вычислений.",
+                        viewModel.videoStatus,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                item {
+                    Text(
+                        "Wan 2.1 T2V 1.3B • 320×192 • 9 кадров • полностью на телефоне.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                item { CommandBox(viewModel, onSpeak, "Опиши видео") }
+                item {
+                    OutlinedTextField(
+                        value = viewModel.input,
+                        onValueChange = { viewModel.input = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Опиши видео") },
+                        minLines = 3,
+                        enabled = !viewModel.busy,
+                    )
+                }
+                item {
+                    Button(
+                        onClick = viewModel::generateOfflineVideo,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !viewModel.busy &&
+                            viewModel.input.isNotBlank(),
+                    ) {
+                        Text(
+                            if (viewModel.busy) "Генерирую видео…"
+                            else "Сгенерировать офлайн-видео"
+                        )
+                    }
+                }
+                if (viewModel.generatedVideoPath.isNotBlank()) {
+                    item {
+                        Text(
+                            "Файл: " + viewModel.generatedVideoPath,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    item {
+                        Button(
+                            onClick = viewModel::openGeneratedVideo,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Открыть видео")
+                        }
+                    }
+                }
             }
 
             "phone" -> {
@@ -1087,12 +1131,67 @@ private fun OfflineModelsSection(viewModel: AssistantViewModel) {
             label = { Text("Модель генерации фото (.gguf/.safetensors)") },
         )
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "Офлайн-генерация видео",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    viewModel.videoStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    "Wan 2.1 T2V 1.3B Q4_0 + VAE + UMT5 • около 4.46 ГБ.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = viewModel::downloadStarterVideoPack,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Скачать видео-комплект")
+                }
+                Button(
+                    onClick = viewModel::checkVideoPackDownload,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !viewModel.busy,
+                ) {
+                    Text("Проверить загрузку видео")
+                }
+            }
+        }
+
         OutlinedTextField(
             value = viewModel.offlineVideoModelPath,
             onValueChange = { viewModel.offlineVideoModelPath = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Модель генерации видео (следующий модуль)") },
+            label = { Text("Wan diffusion модель") },
         )
+
+        OutlinedTextField(
+            value = viewModel.videoVaePath,
+            onValueChange = { viewModel.videoVaePath = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Wan VAE") },
+        )
+
+        OutlinedTextField(
+            value = viewModel.videoTextEncoderPath,
+            onValueChange = { viewModel.videoTextEncoderPath = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("UMT5 text encoder") },
+        )
+
+        Button(
+            onClick = viewModel::saveVideoModels,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Сохранить видео-модели")
+        }
 
         Button(
             onClick = viewModel::saveOfflineModels,
