@@ -29,7 +29,7 @@ fun KotMainMenuScreen(
     }?.name ?: "Я"
 
     val intelligence = setOf(
-        "chat", "models", "voice", "camera", "image", "video",
+        "chat", "web", "code", "models", "voice", "camera", "image", "video",
     )
     val tools = setOf(
         "phone", "files", "automations", "autopilot", "flasher",
@@ -333,6 +333,56 @@ fun KotTaskScreen(
                     }
                 }
                 item { CommandBox(viewModel, onSpeak) }
+            }
+
+            "web" -> {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                "Живой поиск по интернету",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "KOT ищет веб-источники напрямую. AI-сервер для самого поиска не обязателен; с локальной моделью KOT дополнительно соберёт ответ по найденным страницам.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+                item {
+                    CommandBox(
+                        viewModel = viewModel,
+                        onSpeak = onSpeak,
+                        label = "Что найти в интернете",
+                    )
+                }
+            }
+
+            "code" -> {
+                item {
+                    Text(
+                        "Режим программиста: попроси написать функцию, экран, Android-модуль, исправить ошибку или разобрать код.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                item {
+                    CommandBox(
+                        viewModel = viewModel,
+                        onSpeak = onSpeak,
+                        label = "Что написать или исправить",
+                    )
+                }
             }
 
             "voice" -> {

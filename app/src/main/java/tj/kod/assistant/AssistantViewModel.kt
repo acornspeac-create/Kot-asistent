@@ -18,6 +18,7 @@ class AssistantViewModel(
     private val memory = MemoryStore(context)
     private val settings = SettingsStore(context)
     private val api = AssistantApi()
+    private val webSearch = WebSearchClient()
     private val flasherApi = FlasherApi()
     private val offlineAssistant = OfflineAssistant()
     private val ownerActions = OwnerActionExecutor(context)
@@ -735,6 +736,20 @@ class AssistantViewModel(
             val mode = settings.taskMode(taskId)
             selectedTaskMode = mode
 
+            val webResults = if (
+                mode != ConnectionMode.OFFLINE &&
+                shouldSearchWeb(clean, taskId)
+            ) {
+                status = "Ищу в интернете…"
+                runCatching {
+                    webSearch.search(clean)
+                }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
+
+            val webContext = webSearch.toPromptContext(webResults)
+
             val onlineConfigured =
                 serverUrl.isNotBlank() &&
                     serverToken.isNotBlank()
@@ -745,12 +760,16 @@ class AssistantViewModel(
 
             suspend fun askLocal(): String {
                 if (!localReady) {
-                    return offlineAssistant.reply(
-                        clean,
-                        priorMessages,
-                        personaMode,
-                        humorLevel,
-                    )
+                    return if (webResults.isNotEmpty()) {
+                        webSearch.renderForUser(webResults)
+                    } else {
+                        offlineAssistant.reply(
+                            clean,
+                            priorMessages,
+                            personaMode,
+                            humorLevel,
+                        )
+                    }
                 }
 
                 val result = localAi.reply(
@@ -758,6 +777,7 @@ class AssistantViewModel(
                     prompt = buildLocalPrompt(
                         userText = clean,
                         history = priorHistory,
+                        webContext = webContext,
                     ),
                 )
 
@@ -776,7 +796,10 @@ class AssistantViewModel(
                 return api.ask(
                     serverUrl = serverUrl,
                     serverToken = serverToken,
-                    text = buildOnlinePrompt(clean),
+                    text = buildOnlinePrompt(
+                        userText = clean,
+                        webContext = webContext,
+                    ),
                     history = priorHistory,
                 )
             }
@@ -810,13 +833,38 @@ class AssistantViewModel(
                 }
 
                 ConnectionMode.ONLINE -> {
-                    status = "Онлайн…"
+                    status = if (webResults.isNotEmpty()) {
+                        "Онлайн • найдено источников: " + webResults.size
+                    } else {
+                        "Онлайн…"
+                    }
 
-                    reply = runCatching {
-                        askOnline()
-                    }.getOrElse { error ->
-                        "Не удалось выполнить запрос онлайн: " +
-                            (error.message ?: error::class.java.simpleName)
+                    reply = when {
+                        onlineConfigured -> {
+                            runCatching {
+                                askOnline()
+                            }.getOrElse {
+                                if (localReady || webResults.isNotEmpty()) {
+                                    askLocal()
+                                } else {
+                                    "Не удалось выполнить онлайн-запрос: " +
+                                        (it.message ?: it::class.java.simpleName)
+                                }
+                            }
+                        }
+
+                        localReady || webResults.isNotEmpty() -> {
+                            askLocal()
+                        }
+
+                        else -> {
+                            offlineAssistant.reply(
+                                clean,
+                                priorMessages,
+                                personaMode,
+                                humorLevel,
+                            )
+                        }
                     }
                 }
 
@@ -900,6 +948,9 @@ class AssistantViewModel(
                                 humorLevel,
                             )
                         }
+                    } else if (webResults.isNotEmpty()) {
+                        status = "Авто: интернет-поиск готов"
+                        reply = webSearch.renderForUser(webResults)
                     } else {
                         usedOffline = true
                         status = "Авто: базовый локальный режим"
@@ -924,9 +975,45 @@ class AssistantViewModel(
             memory.append(assistantMessage)
 
             busy = false
-            status = if (usedOffline) "Офлайн" else "Готов"
+            status = when {
+                webResults.isNotEmpty() -> "Готов • Интернет"
+                usedOffline -> "Офлайн"
+                else -> "Готов"
+            }
             onReply(finalReply)
         }
+    }
+
+    private fun shouldSearchWeb(
+        text: String,
+        taskId: String,
+    ): Boolean {
+        if (taskId == "web") return true
+        if (taskId in setOf("files", "phone", "autopilot", "models")) {
+            return false
+        }
+
+        val lower = text.lowercase()
+        val webHints = listOf(
+            "найди в интернете",
+            "найди онлайн",
+            "поищи",
+            "поиск",
+            "сайт",
+            "ссылка",
+            "новост",
+            "сегодня",
+            "сейчас",
+            "погода",
+            "курс",
+            "цена",
+            "сколько стоит",
+            "купить",
+            "продать",
+            "объявлен",
+        )
+
+        return webHints.any { hint -> lower.contains(hint) }
     }
 
     private fun shouldPreferOnline(text: String): Boolean {
@@ -1014,6 +1101,7 @@ class AssistantViewModel(
     private fun buildLocalPrompt(
         userText: String,
         history: String,
+        webContext: String = "",
     ): String {
         val persona = when (personaMode) {
             PersonaMode.NORMAL ->
@@ -1054,6 +1142,13 @@ class AssistantViewModel(
             appendLine("Манера речи/акцент: $accent.")
             appendLine("Уровень юмора: $humorLevel из 3.")
             appendLine("Не делай акцент или национальность объектом унижения; юмор строй на ситуации и словах.")
+            if (selectedTaskId == "code") {
+                appendLine("Режим программиста: пиши рабочий код, сохраняй структуру проекта, проверяй ошибки и давай конкретные команды сборки. Не ограничивайся общими советами.")
+            }
+            if (webContext.isNotBlank()) {
+                appendLine("Ниже свежие результаты интернет-поиска. Используй только релевантные факты, не придумывай данные и в конце сохрани полезные ссылки:")
+                appendLine(webContext.take(8_000))
+            }
             if (history.isNotBlank()) {
                 appendLine("История разговора:")
                 appendLine(history.takeLast(7_000))
@@ -1063,12 +1158,23 @@ class AssistantViewModel(
         }
     }
 
-    private fun buildOnlinePrompt(userText: String): String =
+    private fun buildOnlinePrompt(
+        userText: String,
+        webContext: String = "",
+    ): String =
         buildString {
             appendLine("Ты KOT — умный личный ассистент.")
             appendLine("Отвечай прямо на запрос пользователя, без лишних сообщений о режиме работы.")
             appendLine("Не повторяй предыдущий ответ. Используй переданную историю разговора.")
             appendLine("Если задача сложная, дай конкретное решение, шаги, расчёты или код.")
+            if (selectedTaskId == "code") {
+                appendLine("Режим программиста: выдавай рабочий код, исправления, структуру файлов и команды сборки.")
+            }
+            if (webContext.isNotBlank()) {
+                appendLine("Свежие результаты интернет-поиска:")
+                appendLine(webContext.take(8_000))
+                appendLine("Используй найденные источники и не выдумывай текущие данные.")
+            }
             appendLine("Стиль: " + personaMode.label + ".")
             appendLine("Манера/акцент: " + accent + ". Юмор: " + humorLevel + "/3.")
             append("Запрос пользователя: " + userText)
