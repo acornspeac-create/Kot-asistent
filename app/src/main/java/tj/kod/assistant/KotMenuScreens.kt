@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -42,7 +43,7 @@ fun KotMainMenuScreen(
         "phone", "files", "automations", "autopilot", "flasher",
     )
     val system = setOf(
-        "memory", "profiles", "vault", "backup", "updates", "access",
+        "memory", "profiles", "vault", "backup", "updates", "core", "access",
     )
 
     LazyColumn(
@@ -367,16 +368,40 @@ fun KotTaskScreen(
 
             "code" -> {
                 item {
-                    Text(
-                        "Режим программиста: попроси написать функцию, экран, Android-модуль, исправить ошибку или разобрать код.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                "KOT Programmer",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "Можно просто получать код в чате или дать KOT доступ к проекту: он создаст/изменит файлы, отправит их в GitHub и запустит сборку APK.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
                 }
                 item {
                     CommandBox(
                         viewModel = viewModel,
                         onSpeak = onSpeak,
-                        label = "Что написать или исправить",
+                        label = "Написать код без изменения проекта",
+                    )
+                }
+                item {
+                    CoreProjectSection(
+                        viewModel = viewModel,
+                        selfImprove = false,
                     )
                 }
             }
@@ -768,6 +793,44 @@ fun KotTaskScreen(
                 }
             }
 
+            "core" -> {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
+                        ) {
+                            Text(
+                                "Самоусовершенствование ядра",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                "По твоей команде KOT может менять даже критичные файлы своего проекта. Перед записью он создаёт backup-ветку; после commit GitHub Actions собирает новый APK.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+                item {
+                    CoreProjectSection(
+                        viewModel = viewModel,
+                        selfImprove = true,
+                    )
+                }
+            }
+
             else -> {
                 item { CommandBox(viewModel, onSpeak) }
             }
@@ -905,6 +968,170 @@ private fun ServerSection(viewModel: AssistantViewModel) {
             ) {
                 Text("Сохранить сервер")
             }
+        }
+    }
+}
+
+@Composable
+private fun CoreProjectSection(
+    viewModel: AssistantViewModel,
+    selfImprove: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Text(
+                if (selfImprove) "Полный доступ к ядру" else "Редактирование проекта",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Text(
+                "GitHub token сохраняется зашифрованным в Android Keystore. Для записи ему нужен доступ Contents: Read and write.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+
+            OutlinedTextField(
+                value = viewModel.coreRepo,
+                onValueChange = { viewModel.coreRepo = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("GitHub репозиторий owner/name") },
+                singleLine = true,
+                enabled = !viewModel.coreBusy,
+            )
+
+            OutlinedTextField(
+                value = viewModel.coreBranch,
+                onValueChange = { viewModel.coreBranch = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Ветка") },
+                singleLine = true,
+                enabled = !viewModel.coreBusy,
+            )
+
+            OutlinedTextField(
+                value = viewModel.coreToken,
+                onValueChange = { viewModel.coreToken = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("GitHub token") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                enabled = !viewModel.coreBusy,
+            )
+
+            Button(
+                onClick = viewModel::saveCoreConfig,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.coreBusy,
+            ) {
+                Text("Сохранить доступ")
+            }
+
+            OutlinedTextField(
+                value = viewModel.coreInstruction,
+                onValueChange = { viewModel.coreInstruction = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = {
+                    Text(
+                        if (selfImprove) {
+                            "Например: улучши память и убери повторные ответы"
+                        } else {
+                            "Что сделать в проекте"
+                        }
+                    )
+                },
+                minLines = 3,
+                enabled = !viewModel.coreBusy,
+            )
+
+            OutlinedTextField(
+                value = viewModel.coreTargetPath,
+                onValueChange = { viewModel.coreTargetPath = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Конкретный путь файла (необязательно)") },
+                singleLine = true,
+                enabled = !viewModel.coreBusy,
+            )
+
+            Button(
+                onClick = viewModel::planCoreChange,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.coreBusy &&
+                    viewModel.coreInstruction.isNotBlank(),
+            ) {
+                Text("Подготовить план")
+            }
+
+            if (viewModel.coreTargetFiles.isNotEmpty()) {
+                Text(
+                    "Файлы плана:",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                viewModel.coreTargetFiles.forEach { path ->
+                    Text(
+                        "• $path",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            Button(
+                onClick = viewModel::applyCoreChange,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.coreBusy &&
+                    viewModel.coreInstruction.isNotBlank(),
+            ) {
+                Text(
+                    if (viewModel.coreBusy) {
+                        "KOT программирует…"
+                    } else if (selfImprove) {
+                        "Улучшить себя и собрать APK"
+                    } else {
+                        "Применить в проект и собрать"
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = viewModel::checkCoreBuild,
+                    modifier = Modifier.weight(1f),
+                    enabled = !viewModel.coreBusy,
+                ) {
+                    Text("Сборка")
+                }
+                Button(
+                    onClick = viewModel::rollbackCoreChange,
+                    modifier = Modifier.weight(1f),
+                    enabled = !viewModel.coreBusy,
+                ) {
+                    Text("Откатить")
+                }
+            }
+
+            if (viewModel.coreLastBackupBranch.isNotBlank()) {
+                Text(
+                    "Backup: " + viewModel.coreLastBackupBranch,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Text(
+                viewModel.coreStatus,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

@@ -34,12 +34,15 @@ class AssistantViewModel(
     private val localImageModels = LocalImageModelManager(context)
     private val localVideo = LocalVideoEngine(context)
     private val localVideoModels = LocalVideoModelManager(context)
+    private val coreProject = CoreProjectClient()
+    private val coreSecrets = CoreSecretsStore(context)
 
     val messages = mutableStateListOf<Message>()
     val flasherDevices = mutableStateListOf<FlasherDevice>()
     val profiles = mutableStateListOf<KotProfile>()
     val discoveredTextModels = mutableStateListOf<String>()
     val discoveredImageModels = mutableStateListOf<String>()
+    val coreTargetFiles = mutableStateListOf<String>()
 
     var input by mutableStateOf("")
     var serverUrl by mutableStateOf(settings.serverUrl())
@@ -87,6 +90,15 @@ class AssistantViewModel(
     var busy by mutableStateOf(false)
     var status by mutableStateOf("Готов")
 
+    var coreRepo by mutableStateOf(settings.coreRepo())
+    var coreBranch by mutableStateOf(settings.coreBranch())
+    var coreToken by mutableStateOf(coreSecrets.loadToken())
+    var coreInstruction by mutableStateOf("")
+    var coreTargetPath by mutableStateOf("")
+    var coreStatus by mutableStateOf("Ядро готово к изменениям")
+    var coreLastBackupBranch by mutableStateOf(settings.coreLastBackupBranch())
+    var coreBusy by mutableStateOf(false)
+
     init {
         messages.addAll(memory.load())
         profiles.addAll(profilesStore.profiles())
@@ -117,6 +129,331 @@ class AssistantViewModel(
     fun checkForUpdatesNow() {
         UpdateScheduler.checkNow(appContext)
         status = "Проверяю новую версию KOT…"
+    }
+
+
+    fun saveCoreConfig() {
+        val repoName = coreRepo.trim()
+        val branchName = coreBranch.trim().ifBlank { "main" }
+
+        if (!CoreProjectClient.isValidRepository(repoName)) {
+            coreStatus = "Репозиторий укажи как owner/name"
+            return
+        }
+
+        coreRepo = repoName
+        coreBranch = branchName
+        settings.saveCoreConfig(repoName, branchName)
+        coreSecrets.saveToken(coreToken.trim())
+        coreStatus = if (coreToken.isBlank()) {
+            "Репозиторий сохранён. Для изменения файлов нужен GitHub token с доступом Contents: Read and write."
+        } else {
+            "Доступ к ядру сохранён"
+        }
+    }
+
+    fun planCoreChange() {
+        val instruction = coreInstruction.trim()
+        if (instruction.isBlank()) {
+            coreStatus = "Напиши, что KOT должен изменить"
+            return
+        }
+
+        coreTargetFiles.clear()
+
+        val explicitPath = coreTargetPath.trim()
+        val targets = if (explicitPath.isNotBlank()) {
+            listOf(explicitPath)
+        } else {
+            CoreEditPlanner.candidatePaths(instruction)
+        }
+
+        coreTargetFiles.addAll(targets)
+        coreStatus = buildString {
+            append("План готов: ")
+            append(targets.size)
+            append(" файл(а). Перед записью KOT создаст backup-ветку.")
+        }
+    }
+
+    fun applyCoreChange() {
+        if (coreBusy) return
+
+        val instruction = coreInstruction.trim()
+        if (instruction.isBlank()) {
+            coreStatus = "Сначала напиши изменение"
+            return
+        }
+
+        saveCoreConfig()
+        if (coreToken.isBlank()) {
+            coreStatus = "Нужен GitHub token. Он хранится локально зашифрованным через Android Keystore."
+            return
+        }
+
+        if (coreTargetFiles.isEmpty()) {
+            planCoreChange()
+        }
+        if (coreTargetFiles.isEmpty()) {
+            coreStatus = "Не удалось определить файлы для изменения"
+            return
+        }
+
+        val modelPath = offlineTextModelPath.trim()
+        val localReady = modelPath.isNotBlank() && File(modelPath).isFile
+        val onlineReady = serverUrl.isNotBlank() && serverToken.isNotBlank()
+
+        if (!localReady && !onlineReady) {
+            coreStatus = "Для программирования установи локальный Qwen или настрой AI-сервер"
+            return
+        }
+
+        viewModelScope.launch {
+            coreBusy = true
+            coreStatus = "Создаю точку восстановления ядра…"
+
+            val changed = mutableListOf<String>()
+            var backupBranch = ""
+
+            runCatching {
+                backupBranch = coreProject.createBackupBranch(
+                    repository = coreRepo,
+                    branch = coreBranch,
+                    token = coreToken,
+                )
+                coreLastBackupBranch = backupBranch
+                settings.saveCoreRecovery(
+                    backupBranch = backupBranch,
+                    changedPaths = emptyList(),
+                )
+
+                val requestedPaths = coreTargetFiles.toList()
+
+                requestedPaths.forEachIndexed { index, path ->
+                    coreStatus =
+                        "Программирую ${index + 1}/${requestedPaths.size}: $path"
+
+                    val source = coreProject.readFile(
+                        repository = coreRepo,
+                        branch = coreBranch,
+                        path = path,
+                        token = coreToken,
+                    )
+
+                    val prompt = buildCoreProgrammingPrompt(
+                        instruction = instruction,
+                        path = path,
+                        currentContent = source?.content.orEmpty(),
+                        isNewFile = source == null,
+                        allPaths = requestedPaths,
+                    )
+
+                    val raw = if (localReady) {
+                        localAi.reply(
+                            modelPath = modelPath,
+                            prompt = prompt,
+                        ).text
+                    } else {
+                        api.ask(
+                            serverUrl = serverUrl,
+                            serverToken = serverToken,
+                            text = prompt,
+                            history = "",
+                        )
+                    }
+
+                    val newContent = extractProgrammedFile(raw)
+                    require(newContent.isNotBlank()) {
+                        "AI вернул пустой файл для $path"
+                    }
+                    require(!newContent.contains("... existing code ...")) {
+                        "AI оставил заглушку вместо полного файла: $path"
+                    }
+
+                    coreProject.writeFile(
+                        repository = coreRepo,
+                        branch = coreBranch,
+                        path = path,
+                        content = newContent,
+                        currentSha = source?.sha,
+                        message = "KOT self-improvement: " + instruction.take(70),
+                        token = coreToken,
+                    )
+                    changed += path
+                    settings.saveCoreRecovery(
+                        backupBranch = backupBranch,
+                        changedPaths = changed,
+                    )
+                }
+            }.onSuccess {
+                coreStatus =
+                    "Готово. Изменено файлов: ${changed.size}. Backup: $backupBranch. GitHub Actions уже собирает новую версию KOT."
+                status = "KOT улучшил своё ядро • сборка запущена"
+            }.onFailure { error ->
+                coreStatus = buildString {
+                    append("Изменение остановлено: ")
+                    append(error.message ?: error::class.java.simpleName)
+                    if (backupBranch.isNotBlank()) {
+                        append(". Backup сохранён: ")
+                        append(backupBranch)
+                        append(". Можно нажать «Откатить».")
+                    }
+                }
+            }
+
+            coreBusy = false
+        }
+    }
+
+    fun rollbackCoreChange() {
+        if (coreBusy) return
+
+        saveCoreConfig()
+
+        val backup = settings.coreLastBackupBranch()
+        val paths = settings.coreLastChangedPaths()
+
+        if (backup.isBlank() || paths.isEmpty()) {
+            coreStatus = "Нет сохранённого изменения для отката"
+            return
+        }
+        if (coreToken.isBlank()) {
+            coreStatus = "Для отката нужен GitHub token"
+            return
+        }
+
+        viewModelScope.launch {
+            coreBusy = true
+            coreStatus = "Восстанавливаю ядро из $backup…"
+
+            runCatching {
+                paths.forEachIndexed { index, path ->
+                    coreStatus = "Откат ${index + 1}/${paths.size}: $path"
+
+                    val backupFile = coreProject.readFile(
+                        repository = coreRepo,
+                        branch = backup,
+                        path = path,
+                        token = coreToken,
+                    )
+                    val currentFile = coreProject.readFile(
+                        repository = coreRepo,
+                        branch = coreBranch,
+                        path = path,
+                        token = coreToken,
+                    )
+
+                    if (backupFile == null) {
+                        if (currentFile != null) {
+                            coreProject.deleteFile(
+                                repository = coreRepo,
+                                branch = coreBranch,
+                                path = path,
+                                currentSha = currentFile.sha,
+                                message = "KOT rollback: remove new file $path",
+                                token = coreToken,
+                            )
+                        }
+                    } else {
+                        coreProject.writeFile(
+                            repository = coreRepo,
+                            branch = coreBranch,
+                            path = path,
+                            content = backupFile.content,
+                            currentSha = currentFile?.sha,
+                            message = "KOT rollback: restore $path",
+                            token = coreToken,
+                        )
+                    }
+                }
+            }.onSuccess {
+                coreStatus =
+                    "Ядро восстановлено из $backup. GitHub Actions собирает восстановленную версию."
+                status = "Откат ядра выполнен"
+            }.onFailure { error ->
+                coreStatus =
+                    "Ошибка отката: " + (error.message ?: error::class.java.simpleName)
+            }
+
+            coreBusy = false
+        }
+    }
+
+    fun checkCoreBuild() {
+        if (coreBusy) return
+
+        viewModelScope.launch {
+            coreBusy = true
+            coreStatus = "Проверяю GitHub Actions…"
+
+            runCatching {
+                coreProject.latestBuild(
+                    repository = coreRepo,
+                    branch = coreBranch,
+                    token = coreToken,
+                )
+            }.onSuccess { build ->
+                coreStatus = when {
+                    build == null -> "Сборки GitHub Actions пока не найдены"
+                    build.status != "completed" ->
+                        "Сборка #${build.runNumber}: ${build.status}"
+                    build.conclusion == "success" ->
+                        "Сборка #${build.runNumber} готова успешно. Открой «Обновление KOT» и нажми проверку."
+                    else ->
+                        "Сборка #${build.runNumber} завершилась: ${build.conclusion}. Используй backup/откат и исправь ошибку."
+                }
+            }.onFailure { error ->
+                coreStatus =
+                    "Не удалось проверить сборку: " +
+                        (error.message ?: error::class.java.simpleName)
+            }
+
+            coreBusy = false
+        }
+    }
+
+    private fun buildCoreProgrammingPrompt(
+        instruction: String,
+        path: String,
+        currentContent: String,
+        isNewFile: Boolean,
+        allPaths: List<String>,
+    ): String = buildString {
+        appendLine("Ты работаешь как автономный senior-разработчик проекта KOT Assistant.")
+        appendLine("Задача владельца: $instruction")
+        appendLine("Текущий файл: $path")
+        appendLine("Все файлы текущего плана: " + allPaths.joinToString())
+        appendLine("Верни ТОЛЬКО JSON-объект без markdown и объяснений.")
+        appendLine("Формат строго: {\"content\":\"ПОЛНОЕ содержимое файла после изменения\"}")
+        appendLine("Нельзя сокращать файл, писать TODO, 'остальной код без изменений' или многоточия.")
+        appendLine("Сохрани package/imports/API совместимыми с Android/Kotlin проектом, если задача не требует их изменения.")
+        appendLine("Проверь синтаксис и ссылки на существующие методы перед ответом.")
+        if (isNewFile) {
+            appendLine("Файл новый. Создай его полностью.")
+        } else {
+            appendLine("Текущее полное содержимое файла:")
+            appendLine("<<<FILE")
+            appendLine(currentContent)
+            appendLine("FILE")
+        }
+    }
+
+    private fun extractProgrammedFile(raw: String): String {
+        val cleaned = raw
+            .trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        val start = cleaned.indexOf('{')
+        val end = cleaned.lastIndexOf('}')
+        require(start >= 0 && end > start) {
+            "AI не вернул ожидаемый JSON"
+        }
+
+        val json = org.json.JSONObject(cleaned.substring(start, end + 1))
+        return json.getString("content")
     }
 
     fun setTaskMode(mode: ConnectionMode) {

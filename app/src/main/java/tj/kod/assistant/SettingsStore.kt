@@ -11,6 +11,23 @@ class SettingsStore(context: Context) {
     fun flasherUrl(): String = prefs.getString(KEY_FLASHER_URL, "") ?: ""
     fun flasherToken(): String = prefs.getString(KEY_FLASHER_TOKEN, "") ?: ""
 
+    fun coreRepo(): String =
+        prefs.getString(KEY_CORE_REPO, "acornspeac-create/Kot-asistent")
+            ?: "acornspeac-create/Kot-asistent"
+
+    fun coreBranch(): String =
+        prefs.getString(KEY_CORE_BRANCH, "main") ?: "main"
+
+    fun coreLastBackupBranch(): String =
+        prefs.getString(KEY_CORE_BACKUP_BRANCH, "") ?: ""
+
+    fun coreLastChangedPaths(): List<String> =
+        prefs.getString(KEY_CORE_CHANGED_PATHS, "")
+            .orEmpty()
+            .split("\n")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+
     fun taskMode(taskId: String): ConnectionMode {
         val raw = prefs.getString("task_mode_" + taskId, ConnectionMode.AUTO.name)
             ?: ConnectionMode.AUTO.name
@@ -110,6 +127,26 @@ class SettingsStore(context: Context) {
             .apply()
     }
 
+    fun saveCoreConfig(
+        repository: String,
+        branch: String,
+    ) {
+        prefs.edit()
+            .putString(KEY_CORE_REPO, repository.trim())
+            .putString(KEY_CORE_BRANCH, branch.trim().ifBlank { "main" })
+            .apply()
+    }
+
+    fun saveCoreRecovery(
+        backupBranch: String,
+        changedPaths: List<String>,
+    ) {
+        prefs.edit()
+            .putString(KEY_CORE_BACKUP_BRANCH, backupBranch)
+            .putString(KEY_CORE_CHANGED_PATHS, changedPaths.joinToString("\n"))
+            .apply()
+    }
+
     fun saveFlasherConfig(
         url: String,
         token: String,
@@ -134,6 +171,9 @@ class SettingsStore(context: Context) {
             .put("videoTextEncoderPath", videoTextEncoderPath())
             .put("continuousVoice", continuousVoice())
             .put("wakeWord", wakeWord())
+            .put("coreRepo", coreRepo())
+            .put("coreBranch", coreBranch())
+            .put("coreLastBackupBranch", coreLastBackupBranch())
 
         val taskModes = JSONObject()
         KotTasks.all.forEach { task ->
@@ -159,5 +199,9 @@ class SettingsStore(context: Context) {
         const val KEY_VIDEO_TEXT_ENCODER = "video_text_encoder"
         const val KEY_CONTINUOUS_VOICE = "continuous_voice"
         const val KEY_WAKE_WORD = "wake_word"
+        const val KEY_CORE_REPO = "core_repo"
+        const val KEY_CORE_BRANCH = "core_branch"
+        const val KEY_CORE_BACKUP_BRANCH = "core_backup_branch"
+        const val KEY_CORE_CHANGED_PATHS = "core_changed_paths"
     }
 }
