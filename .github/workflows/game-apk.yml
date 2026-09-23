@@ -8,6 +8,10 @@ on:
       - '.github/workflows/game-apk.yml'
   workflow_dispatch:
 
+concurrency:
+  group: catch-game-apk-main
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,15 +41,29 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Restore stable game signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: catch-game-development-signing-v1
+
+      - name: Ensure stable game signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair               -keystore "$HOME/.android/debug.keystore"               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=Catch Game Development,O=Catch Game,C=TJ"               -keyalg RSA               -keysize 2048               -validity 10000
+          fi
+
       - name: Build APK
         run: gradle -p simple-game :app:assembleDebug --no-daemon
 
       - name: Prepare APK
-        run: cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/Catch-Game.apk
+        run: cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/Catch-Game-v1.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: catch-game-apk
-          path: simple-game/Catch-Game.apk
+          path: simple-game/Catch-Game-v1.1.apk
           retention-days: 7
