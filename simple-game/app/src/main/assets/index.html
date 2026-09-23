@@ -122,6 +122,7 @@ button{border:0;color:#fff;cursor:pointer}
     <div class="grid2">
       <button class="cardBtn" data-go="worlds"><span class="emoji">🌌</span><b>Миры</b><small>16 арен открыты</small></button>
       <button class="cardBtn" data-go="collection"><span class="emoji">🃏</span><b>Коллекция</b><small>1000 карточек</small></button>
+      <button class="cardBtn" data-go="online"><span class="emoji">🌐</span><b>Онлайн</b><small>Профиль · рейтинг · PvP</small></button>
     </div>
   </section>
 
@@ -137,6 +138,18 @@ button{border:0;color:#fff;cursor:pointer}
     <div class="shopGrid" id="skinsGrid"></div>
     <div class="section-title">Усилители</div>
     <div class="shopGrid" id="powerShop"></div>
+
+    <div class="section-title">Монеты за реальные деньги</div>
+    <div class="muted" id="billingHint">Покупки проходят через Google Play. Доступные способы оплаты показывает сам Google Play.</div>
+    <div class="shopGrid" id="moneyShop"></div>
+
+    <div class="section-title">Реклама</div>
+    <div class="listCard">
+      <div class="row">
+        <div class="grow"><b>Рекламные места подготовлены</b><div class="muted">Пока реклама отключена. Когда появится рекламодатель или рекламная сеть, подключим показы и награды за просмотр.</div></div>
+        <span>📣</span>
+      </div>
+    </div>
   </section>
 
   <section id="collectionScreen" class="screen">
@@ -167,15 +180,52 @@ button{border:0;color:#fff;cursor:pointer}
     </div>
     <div class="section-title">Достижения</div>
     <div id="achievementsList"></div>
+    <div class="section-title">Онлайн-профиль</div>
+    <div class="listCard">
+      <div class="row"><div class="grow"><b>Облачная синхронизация</b><div class="muted">Профиль, монеты, карты и рекорд будут переноситься между телефонами после подключения сервера.</div></div><button class="action" id="openOnlineBtn">ОНЛАЙН</button></div>
+    </div>
+
     <div class="section-title">Настройки</div>
     <div class="listCard">
-      <div class="row"><div class="grow"><b>Звуки котика</b><div class="muted">Мяу, комбо и награды</div></div><button class="action" id="soundToggle">ВКЛ</button></div>
+      <b>Голос цели</b>
+      <div class="muted">Выбери звук животного при попадании.</div>
+      <select class="nameInput" id="animalSoundSelect">
+        <option value="cat">🐱 Кот — мяу</option>
+        <option value="dog">🐶 Собака — гав</option>
+        <option value="bird">🐦 Птица — чирик</option>
+        <option value="tiger">🐯 Тигр — рык</option>
+        <option value="lion">🦁 Лев — рык</option>
+        <option value="frog">🐸 Лягушка — квак</option>
+        <option value="owl">🦉 Сова — уху</option>
+        <option value="mouse">🐭 Мышь — писк</option>
+      </select>
+      <div class="row"><div class="grow"><b>Звуки</b><div class="muted">Голос животного, комбо и награды</div></div><button class="action" id="soundToggle">ВКЛ</button></div>
     </div>
     <div class="listCard">
       <div class="row"><div class="grow"><b>Вибрация</b><div class="muted">Отклик при попадании</div></div><button class="action" id="vibrateToggle">ВКЛ</button></div>
     </div>
     <div class="listCard">
-      <div class="row"><div class="grow"><b>Облачный аккаунт</b><div class="muted">Локальный профиль уже работает. Облачная синхронизация потребует сервер входа.</div></div><span>☁️</span></div>
+      <div class="row"><div class="grow"><b>Версия онлайн-клиента</b><div class="muted">Готов к подключению backend API и безопасной проверке покупок.</div></div><span>☁️</span></div>
+    </div>
+  </section>
+
+  <section id="onlineScreen" class="screen">
+    <div class="topline"><div class="brand">🌐 Онлайн</div><div class="pill" id="onlineBadge">OFFLINE</div></div>
+    <div class="hero">
+      <h1>Онлайн-мир<br>KOT Catch</h1>
+      <p id="onlineStatusText">Клиент готов. Для настоящего входа, рейтинга и PvP нужно подключить сервер аккаунтов.</p>
+      <div class="hero-cat">🌐</div>
+    </div>
+    <div class="section-title">Онлайн-функции</div>
+    <div class="grid2">
+      <button class="cardBtn" id="onlineProfileBtn"><span class="emoji">👤</span><b>Онлайн-профиль</b><small>Синхронизация прогресса</small></button>
+      <button class="cardBtn" id="leaderboardBtn"><span class="emoji">🏆</span><b>Рейтинг</b><small>Лучшие игроки мира</small></button>
+      <button class="cardBtn" id="duelBtn"><span class="emoji">⚔️</span><b>Дуэль 1×1</b><small>Кто быстрее ловит цель</small></button>
+      <button class="cardBtn" id="friendsBtn"><span class="emoji">🤝</span><b>Друзья</b><small>Добавление и вызов друзей</small></button>
+    </div>
+    <div class="section-title">Статус сервера</div>
+    <div class="listCard">
+      <div class="row"><div class="grow"><b id="serverStatusTitle">Сервер не подключён</b><div class="muted" id="serverStatusDesc">После подключения Supabase здесь заработают регистрация, вход, облачное сохранение, рейтинг и PvP.</div></div><span id="serverStatusIcon">🔌</span></div>
     </div>
   </section>
 
@@ -241,7 +291,7 @@ button{border:0;color:#fff;cursor:pointer}
   const defaultState={
     coins:250,best:0,xp:0,games:0,totalHits:0,maxCombo:0,
     nickname:"Игрок",guestId:"KOT-"+Math.random().toString(36).slice(2,8).toUpperCase(),
-    sound:true,vibrate:true,world:0,mode:"normal",skin:"cat",
+    sound:true,vibrate:true,soundType:"cat",world:0,mode:"normal",skin:"cat",
     ownedSkins:["cat"],cards:[0,1,2,3,4,5],lastDaily:"",
     powers:{freeze:2,shield:1,double:1},worldsPlayed:{},achievements:{}
   };
@@ -332,16 +382,51 @@ button{border:0;color:#fff;cursor:pointer}
   function vibrate(ms){if(state.vibrate&&navigator.vibrate)navigator.vibrate(ms)}
   let audioCtx=null;
   function ctx(){if(!audioCtx)try{audioCtx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){};if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();return audioCtx}
-  function meow(pitch){
-    if(!state.sound)return;
+  function tone(freq,duration,type,volume,delay){
     const c=ctx();if(!c)return;
-    const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();
-    const t=c.currentTime,p=pitch||1;
-    o.type="triangle";f.type="lowpass";f.frequency.setValueAtTime(1500,c.currentTime);
-    o.frequency.setValueAtTime(430*p,t);o.frequency.exponentialRampToValueAtTime(720*p,t+.09);o.frequency.exponentialRampToValueAtTime(330*p,t+.38);
-    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.19,t+.035);g.gain.exponentialRampToValueAtTime(.055,t+.18);g.gain.exponentialRampToValueAtTime(.0001,t+.42);
-    o.connect(f);f.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45);
+    const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+(delay||0);
+    o.type=type||"sine";
+    o.frequency.setValueAtTime(Math.max(40,freq),t);
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(volume||.12,t+.018);
+    g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+duration+.03);
   }
+  function growl(base,duration,pitch){
+    const c=ctx();if(!c)return;
+    const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter(),t=c.currentTime;
+    o.type="sawtooth";o.frequency.setValueAtTime(base*(pitch||1),t);o.frequency.exponentialRampToValueAtTime(base*.68*(pitch||1),t+duration);
+    f.type="lowpass";f.frequency.value=620;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.15,t+.035);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    o.connect(f);f.connect(g);g.connect(c.destination);o.start(t);o.stop(t+duration+.03);
+  }
+  function animalVoice(pitch){
+    if(!state.sound)return;
+    const p=pitch||1,type=state.soundType||"cat",c=ctx();if(!c)return;
+    if(type==="dog"){
+      tone(185*p,.13,"square",.14,0);tone(150*p,.16,"square",.13,.15);
+    }else if(type==="bird"){
+      tone(1450*p,.08,"sine",.10,0);tone(1900*p,.07,"sine",.09,.075);tone(1650*p,.09,"sine",.08,.145);
+    }else if(type==="tiger"){
+      growl(145,.52,p);tone(92*p,.36,"sawtooth",.08,.08);
+    }else if(type==="lion"){
+      growl(112,.66,p);tone(72*p,.50,"sawtooth",.09,.08);
+    }else if(type==="frog"){
+      tone(118*p,.16,"square",.12,0);tone(92*p,.20,"square",.13,.12);
+    }else if(type==="owl"){
+      tone(410*p,.26,"sine",.11,0);tone(330*p,.30,"sine",.10,.31);
+    }else if(type==="mouse"){
+      tone(1800*p,.07,"triangle",.08,0);tone(2200*p,.06,"triangle",.07,.075);tone(2000*p,.07,"triangle",.06,.14);
+    }else{
+      const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();
+      const t=c.currentTime;
+      o.type="triangle";f.type="lowpass";f.frequency.setValueAtTime(1500,t);
+      o.frequency.setValueAtTime(430*p,t);o.frequency.exponentialRampToValueAtTime(720*p,t+.09);o.frequency.exponentialRampToValueAtTime(330*p,t+.38);
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.19,t+.035);g.gain.exponentialRampToValueAtTime(.055,t+.18);g.gain.exponentialRampToValueAtTime(.0001,t+.42);
+      o.connect(f);f.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45);
+    }
+  }
+  function meow(pitch){animalVoice(pitch);}
   function rewardSound(){
     if(!state.sound)return;const c=ctx();if(!c)return;
     [0,100,210].forEach((x,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.08;o.frequency.value=520+x;g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.12,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.17)});
@@ -360,12 +445,13 @@ button{border:0;color:#fff;cursor:pointer}
     $("#hitsText").textContent=state.totalHits;
     $("#soundToggle").textContent=state.sound?"ВКЛ":"ВЫКЛ";
     $("#vibrateToggle").textContent=state.vibrate?"ВКЛ":"ВЫКЛ";
+    $("#animalSoundSelect").value=state.soundType||"cat";
     $("#modeText").textContent=modes[state.mode].name;
     $("#dailyText").textContent=state.lastDaily===today()?"Уже получено":"Забрать 150 🪙 + карточку";
-    renderWorlds();renderShop();renderCards();renderAchievements();
+    renderWorlds();renderShop();renderMoneyShop();renderCards();renderAchievements();
   }
 
-  const screens=["home","worlds","shop","collection","profile","game"];
+  const screens=["home","worlds","shop","collection","profile","online","game"];
   function showScreen(name){
     screens.forEach(n=>$("#"+n+"Screen").classList.toggle("active",n===name));
     $("#nav").style.display=name==="game"?"none":"flex";
@@ -402,6 +488,46 @@ button{border:0;color:#fff;cursor:pointer}
     if(state.coins<p){toast("Не хватает монет");return}
     state.coins-=p;state.powers[id]=(state.powers[id]||0)+1;save();rewardSound();toast("Усилитель куплен");
   }
+
+  const coinProducts=[
+    {id:"kot_coins_500",coins:500,title:"Мешочек монет",fallback:"500 🪙"},
+    {id:"kot_coins_1500",coins:1500,title:"Большой мешок",fallback:"1500 🪙"},
+    {id:"kot_coins_5000",coins:5000,title:"Сундук монет",fallback:"5000 🪙"},
+    {id:"kot_coins_12000",coins:12000,title:"Королевский сундук",fallback:"12000 🪙"}
+  ];
+  let billingInfo={};
+  function renderMoneyShop(){
+    const box=$("#moneyShop");if(!box)return;
+    box.innerHTML=coinProducts.map(p=>{
+      const info=billingInfo[p.id],price=info&&info.price?info.price:"Google Play";
+      return '<div class="shopItem"><div class="preview">🪙</div><b>'+p.fallback+'</b><small>'+p.title+'</small><button class="priceBtn" data-buy-product="'+p.id+'">'+price+'</button></div>';
+    }).join("");
+    $("#moneyShop [data-buy-product]").forEach(b=>b.addEventListener("click",()=>buyRealCoins(b.dataset.buyProduct)));
+  }
+  function requestBillingProducts(){
+    if(window.AndroidBilling&&AndroidBilling.requestProducts){AndroidBilling.requestProducts();return true}
+    $("#billingHint").textContent="Покупки доступны в Android APK через Google Play.";
+    return false;
+  }
+  function buyRealCoins(productId){
+    if(window.AndroidBilling&&AndroidBilling.buy){
+      AndroidBilling.buy(productId,state.guestId||"kot-player");
+    }else toast("Google Play Billing доступен только в установленном APK");
+  }
+  window.onBillingProducts=function(json){
+    try{
+      const arr=JSON.parse(json);billingInfo={};
+      arr.forEach(x=>billingInfo[x.id]=x);
+      $("#billingHint").textContent=arr.length?"Google Play подключён. Цена берётся из вашего региона.":"Товары ещё не созданы в Google Play Console.";
+      renderMoneyShop();
+    }catch(e){}
+  };
+  window.onBillingPurchase=function(productId){
+    const p=coinProducts.find(x=>x.id===productId);if(!p)return;
+    state.coins+=p.coins;save();rewardSound();toast("Покупка успешна: +"+p.coins+" монет");
+  };
+  window.onBillingMessage=function(message){toast(String(message||"Google Play"));}
+  setTimeout(requestBillingProducts,700);
 
   let cardPage=0,onlyUnlocked=false;
   function cardResults(){
@@ -446,8 +572,15 @@ button{border:0;color:#fff;cursor:pointer}
   $("#saveProfile").addEventListener("click",()=>{
     const n=$("#nicknameInput").value.trim().slice(0,18);state.nickname=n||"Игрок";save();toast("Профиль сохранён");
   });
-  $("#soundToggle").addEventListener("click",()=>{state.sound=!state.sound;save();if(state.sound)meow(1)});
+  $("#animalSoundSelect").addEventListener("change",()=>{
+    state.soundType=$("#animalSoundSelect").value;save();animalVoice(1);toast("Голос изменён");
+  });
+  $("#soundToggle").addEventListener("click",()=>{state.sound=!state.sound;save();if(state.sound)animalVoice(1)});
   $("#vibrateToggle").addEventListener("click",()=>{state.vibrate=!state.vibrate;save();vibrate(30)});
+  $("#openOnlineBtn").addEventListener("click",()=>showScreen("online"));
+  ["onlineProfileBtn","leaderboardBtn","duelBtn","friendsBtn"].forEach(id=>$("#"+id).addEventListener("click",()=>{
+    toast("Подключи онлайн-сервер — интерфейс уже готов");
+  }));
 
   $("#modeBtn").addEventListener("click",()=>$("#modeOverlay").classList.add("show"));
   $("#closeMode").addEventListener("click",()=>$("#modeOverlay").classList.remove("show"));
