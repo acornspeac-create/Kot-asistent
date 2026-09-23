@@ -35,8 +35,9 @@ function makeClassList() {
 
 function el(key) {
   if (!elements.has(key)) {
+    const style = { setProperty(name, value) { this[name] = value; } };
     elements.set(key, {
-      style: {},
+      style,
       dataset: {},
       value: "",
       textContent: "",
@@ -47,6 +48,7 @@ function el(key) {
       addEventListener(type, fn) { listeners.set(key + "::" + type, fn); },
       closest() { return null; },
       remove() {},
+      appendChild() {},
       setAttribute() {},
       getAttribute() { return null; }
     });
@@ -110,4 +112,27 @@ if (el("#catTarget").style.display !== "block") {
   process.exit(4);
 }
 
-console.log("SMOKE_OK: game initialized and Play handler started gameplay");
+const catHit = listeners.get("#catTarget::pointerdown");
+if (typeof catHit !== "function") {
+  console.error("CAT_HIT_HANDLER_MISSING");
+  process.exit(5);
+}
+
+const beforeLeft = el("#catTarget").style.left;
+const beforeTop = el("#catTarget").style.top;
+
+try {
+  catHit({ stopPropagation() {}, clientX: 180, clientY: 320, target: el("#catTarget") });
+} catch (e) {
+  console.error("CAT_HIT_FAIL", e.stack || e);
+  process.exit(6);
+}
+
+const afterLeft = el("#catTarget").style.left;
+const afterTop = el("#catTarget").style.top;
+if (beforeLeft === afterLeft && beforeTop === afterTop) {
+  console.error("TARGET_DID_NOT_MOVE_AFTER_HIT", { beforeLeft, beforeTop, afterLeft, afterTop });
+  process.exit(7);
+}
+
+console.log("SMOKE_OK: Play starts gameplay and target relocates after a hit");
