@@ -52,18 +52,31 @@ jobs:
         run: |
           mkdir -p "$HOME/.android"
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair               -keystore "$HOME/.android/debug.keystore"               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=Catch Game Development,O=Catch Game,C=TJ"               -keyalg RSA               -keysize 2048               -validity 10000
+            keytool -genkeypair \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Catch Game Development,O=Catch Game,C=TJ" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
           fi
 
-      - name: Build APK
+      - name: Build APK and AAB
         run: gradle -p simple-game :app:assembleDebug :app:bundleDebug --no-daemon
 
-      - name: Prepare APK
-        run: cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.2.apk\n          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.2-test.aab
+      - name: Prepare build files
+        shell: bash
+        run: |
+          cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.2.apk
+          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.2-test.aab
 
-      - name: Upload APK
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: kot-catch-v2-2-build
-          path: |\n            simple-game/KOT-Catch-v2.2.apk\n            simple-game/KOT-Catch-v2.2-test.aab
+          path: |
+            simple-game/KOT-Catch-v2.2.apk
+            simple-game/KOT-Catch-v2.2-test.aab
           retention-days: 7
