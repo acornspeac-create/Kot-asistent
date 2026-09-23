@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Мяу Радость</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f7f4ff;color:#403853;overflow:hidden}
+body{background:
+radial-gradient(circle at 20% 10%,rgba(255,200,222,.55),transparent 30%),
+radial-gradient(circle at 85% 18%,rgba(194,221,255,.6),transparent 30%),
+linear-gradient(180deg,#faf8ff 0%,#f4f0ff 100%)}
+.app{height:100vh;display:flex;flex-direction:column;padding:max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.brand{min-width:0}
+.title{font-weight:900;font-size:22px;letter-spacing:-.4px}
+.sub{font-size:12px;color:#7a708e}
+.sound{border:0;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(89,73,120,.09);width:46px;height:46px;border-radius:16px;font-size:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{background:rgba(255,255,255,.78);border:1px solid rgba(98,81,129,.08);border-radius:18px;padding:9px 7px;text-align:center;box-shadow:0 8px 20px rgba(89,73,120,.06)}
+.label{font-size:10px;color:#8a809b;text-transform:uppercase;letter-spacing:.6px}
+.value{font-size:20px;font-weight:900;margin-top:1px}
+.field{position:relative;flex:1;min-height:320px;border-radius:30px;overflow:hidden;background:
+radial-gradient(circle at 50% 22%,rgba(255,255,255,.96),rgba(255,255,255,.72) 45%,rgba(243,238,255,.8));
+border:1px solid rgba(112,94,145,.08);box-shadow:inset 0 0 45px rgba(174,157,219,.1),0 18px 45px rgba(94,74,132,.08)}
+.orb{position:absolute;width:76px;height:76px;border:0;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:39px;background:#fff;box-shadow:0 0 0 9px rgba(196,176,255,.14),0 12px 30px rgba(126,103,178,.16);transition:left .18s ease,top .18s ease,transform .08s ease;user-select:none}
+.orb:active{transform:scale(.86)}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(248,245,255,.72);backdrop-filter:blur(9px);z-index:5}
+.card{text-align:center;max-width:330px}
+.bigcat{font-size:68px;filter:drop-shadow(0 10px 12px rgba(91,72,130,.12));animation:float 2.4s ease-in-out infinite}
+h1{font-size:24px;margin:8px 0 8px;line-height:1.08}
+p{margin:0 0 18px;color:#786f8c;line-height:1.42;font-size:14px}
+.primary,.again{border:0;border-radius:18px;padding:14px 22px;min-height:52px;font-size:16px;font-weight:850;color:#fff;background:linear-gradient(135deg,#8d73e6,#b782e8);box-shadow:0 12px 26px rgba(132,102,190,.24)}
+.again{width:100%;margin-top:8px}
+.bottom{padding:10px 2px 0}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#7a708e}
+.meter{height:9px;background:rgba(104,86,140,.10);border-radius:99px;overflow:hidden;margin-top:7px}
+.fill{height:100%;width:8%;border-radius:99px;background:linear-gradient(90deg,#b5a0ff,#ffafca,#ffd889);transition:width .22s ease}
+.status{text-align:center;font-size:12px;color:#7a708e;min-height:18px;margin-top:7px}
+.spark,.float{position:absolute;pointer-events:none;z-index:4}
+.spark{font-size:17px;animation:spark .65s ease-out forwards}
+.float{font-size:16px;font-weight:900;color:#7b61cf;animation:up .7s ease-out forwards}
+.hidden{display:none!important}
+@keyframes float{50%{transform:translateY(-7px)}}
+@keyframes spark{to{opacity:0;transform:translate(var(--x),var(--y)) scale(1.3)}}
+@keyframes up{to{opacity:0;transform:translateY(-44px) scale(1.12)}}
+@media(prefers-reduced-motion:reduce){.bigcat{animation:none}.orb{transition:none}.spark,.float{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand"><div class="title">Мяу Радость</div><div class="sub">маленькая игра для приятного настроения</div></div>
+    <button id="sound" class="sound" type="button" aria-label="Звук">🔊</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">Очки</div><div id="score" class="value">0</div></div>
+    <div class="stat"><div class="label">Комбо</div><div id="combo" class="value">×1</div></div>
+    <div class="stat"><div class="label">Время</div><div id="time" class="value">45</div></div>
+  </div>
+
+  <div id="field" class="field">
+    <button id="cat" class="orb" type="button" aria-label="Поймать котика">🐱</button>
+
+    <div id="startOverlay" class="overlay">
+      <div class="card">
+        <div class="bigcat">🐱</div>
+        <h1>45 секунд хорошего настроения</h1>
+        <p>Нажимай на котика. Чем быстрее ловишь, тем выше комбо. Здесь нет проигрыша — только приятный ритм и очки.</p>
+        <button id="start" class="primary" type="button">Начать игру</button>
+      </div>
+    </div>
+
+    <div id="endOverlay" class="overlay hidden">
+      <div class="card">
+        <div class="bigcat">😺</div>
+        <h1 id="endTitle">Красиво!</h1>
+        <p id="result">Ты набрал 0 очков.</p>
+        <button id="again" class="again" type="button">Ещё раз</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="row"><span>Шкала радости</span><span id="mood">Спокойно ✨</span></div>
+    <div class="meter"><div id="fill" class="fill"></div></div>
+    <div id="status" class="status">Нажми «Начать игру».</div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const field=$("field"),cat=$("cat"),start=$("start"),again=$("again"),startOverlay=$("startOverlay"),endOverlay=$("endOverlay");
+const scoreEl=$("score"),comboEl=$("combo"),timeEl=$("time"),status=$("status"),fill=$("fill"),mood=$("mood"),soundBtn=$("sound"),result=$("result"),endTitle=$("endTitle");
+let score=0,combo=1,time=45,running=false,lastHit=0,timer=null,sound=true,audio=null;
+let best=Number(localStorage.getItem("joycat_best")||0);
+
+function tone(level){
+  if(!sound)return;
+  try{
+    audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+    const o=audio.createOscillator(),g=audio.createGain();
+    o.type="sine";
+    o.frequency.setValueAtTime(430+Math.min(level,10)*22,audio.currentTime);
+    o.frequency.exponentialRampToValueAtTime(650+Math.min(level,10)*24,audio.currentTime+.08);
+    g.gain.setValueAtTime(.0001,audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.065,audio.currentTime+.012);
+    g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.13);
+    o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.14);
+  }catch(e){}
+}
+
+function moveCat(){
+  const w=field.clientWidth,h=field.clientHeight,s=76,p=14;
+  const x=p+Math.random()*Math.max(1,w-s-p*2);
+  const y=p+Math.random()*Math.max(1,h-s-p*2);
+  cat.style.left=x+"px";cat.style.top=y+"px";
+}
+
+function moodUpdate(){
+  const pct=Math.min(100,8+score*1.18);
+  fill.style.width=pct+"%";
+  if(pct<35)mood.textContent="Спокойно ✨";
+  else if(pct<70)mood.textContent="Очень приятно 😊";
+  else if(pct<100)mood.textContent="Отличное настроение 🌸";
+  else mood.textContent="Максимум радости 🌟";
+}
+
+function burst(){
+  const r=cat.getBoundingClientRect(),fr=field.getBoundingClientRect();
+  const x=r.left-fr.left+r.width/2,y=r.top-fr.top+r.height/2;
+  const chars=["✨","✦","♡","·"];
+  for(let i=0;i<6;i++){
+    const s=document.createElement("span");s.className="spark";s.textContent=chars[i%chars.length];
+    s.style.left=x+"px";s.style.top=y+"px";
+    s.style.setProperty("--x",((Math.random()-.5)*100)+"px");
+    s.style.setProperty("--y",(-25-Math.random()*70)+"px");
+    field.appendChild(s);setTimeout(()=>s.remove(),720);
+  }
+  const f=document.createElement("span");f.className="float";f.textContent="+"+combo;
+  f.style.left=x+"px";f.style.top=y+"px";field.appendChild(f);setTimeout(()=>f.remove(),760);
+}
+
+function hit(){
+  if(!running)return;
+  const now=Date.now();
+  combo=(now-lastHit<950)?Math.min(12,combo+1):1;
+  lastHit=now;score+=combo;
+  scoreEl.textContent=score;comboEl.textContent="×"+combo;
+  burst();tone(combo);moodUpdate();
+  status.textContent=combo>=8?"Супер-комбо! 😺":combo>=4?"Красивый ритм ✨":"Мяу! +"+combo;
+  moveCat();
+}
+
+function finish(){
+  running=false;clearInterval(timer);timer=null;cat.style.display="none";
+  if(score>best){best=score;localStorage.setItem("joycat_best",String(best));endTitle.textContent="Новый рекорд! 🌟";}
+  else endTitle.textContent="Красиво! 😺";
+  result.textContent="Ты набрал "+score+" очков. Лучший результат: "+best+".";
+  endOverlay.classList.remove("hidden");
+  status.textContent="Готово. Можно сыграть ещё раз.";
+}
+
+function startGame(){
+  clearInterval(timer);score=0;combo=1;time=45;lastHit=0;running=true;
+  scoreEl.textContent="0";comboEl.textContent="×1";timeEl.textContent="45";
+  fill.style.width="8%";mood.textContent="Спокойно ✨";status.textContent="Лови котика!";
+  startOverlay.classList.add("hidden");endOverlay.classList.add("hidden");cat.style.display="flex";
+  moveCat();tone(1);
+  timer=setInterval(()=>{time--;timeEl.textContent=time;if(time<=0)finish();},1000);
+}
+
+start.addEventListener("click",startGame);
+again.addEventListener("click",startGame);
+cat.addEventListener("click",hit);
+soundBtn.addEventListener("click",()=>{sound=!sound;soundBtn.textContent=sound?"🔊":"🔇";if(sound)tone(1);});
+window.addEventListener("resize",()=>{if(running)moveCat();},{passive:true});
+})();
+</script>
+</body>
+</html>
