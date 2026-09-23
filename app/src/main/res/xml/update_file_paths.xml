@@ -2,4 +2,10 @@
     <files-path
         name="updates"
         path="updates/" />
+    <external-files-path
+        name="kot_movies"
+        path="Movies/KOT/" />
+    <external-files-path
+        name="kot_pictures"
+        path="Pictures/KOT/" />
 </paths>
