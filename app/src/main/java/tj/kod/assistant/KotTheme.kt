@@ -9,32 +9,43 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+val KotNeonGreen = Color(0xFF35F39A)
+val KotNeonCyan = Color(0xFF27DFFF)
+val KotNeonBlue = Color(0xFF557CFF)
+val KotInk = Color(0xFF05080D)
+val KotPanel = Color(0xFF0B1118)
+val KotPanelRaised = Color(0xFF101823)
+val KotMuted = Color(0xFF8FA2B5)
+
 private val KotDarkColors = darkColorScheme(
-    primary = Color(0xFF39F58A),
-    onPrimary = Color(0xFF00210F),
-    primaryContainer = Color(0xFF0D2A1A),
-    onPrimaryContainer = Color(0xFFC0FFD8),
-    secondary = Color(0xFF4E8CFF),
-    onSecondary = Color(0xFF07172F),
-    secondaryContainer = Color(0xFF102441),
-    onSecondaryContainer = Color(0xFFD7E5FF),
-    background = Color(0xFF080B0D),
-    onBackground = Color(0xFFF2F6F4),
-    surface = Color(0xFF0D1114),
-    onSurface = Color(0xFFF2F6F4),
-    surfaceVariant = Color(0xFF141A1E),
-    onSurfaceVariant = Color(0xFFB8C2BD),
-    outline = Color(0xFF34413B),
-    error = Color(0xFFFF6B6B),
-    onError = Color(0xFF2B0000),
+    primary = KotNeonGreen,
+    onPrimary = Color(0xFF002817),
+    primaryContainer = Color(0xFF0A2A1D),
+    onPrimaryContainer = Color(0xFFD1FFE5),
+    secondary = KotNeonCyan,
+    onSecondary = Color(0xFF001F27),
+    secondaryContainer = Color(0xFF08232A),
+    onSecondaryContainer = Color(0xFFD0F8FF),
+    tertiary = KotNeonBlue,
+    onTertiary = Color.White,
+    background = KotInk,
+    onBackground = Color(0xFFF4F8FC),
+    surface = KotPanel,
+    onSurface = Color(0xFFF4F8FC),
+    surfaceVariant = KotPanelRaised,
+    onSurfaceVariant = Color(0xFFB5C3D0),
+    outline = Color(0xFF243240),
+    outlineVariant = Color(0xFF17222D),
+    error = Color(0xFFFF6B78),
+    onError = Color(0xFF330008),
 )
 
 private val KotShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(18.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(30.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
 @Composable
