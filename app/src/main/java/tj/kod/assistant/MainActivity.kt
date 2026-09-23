@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
 
         setContent {
-            MaterialTheme {
+            KotTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     when {
                         viewModel.showFlasher -> {

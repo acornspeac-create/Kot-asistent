@@ -101,6 +101,11 @@ class AssistantViewModel(
         showAccess = false
     }
 
+    fun checkForUpdatesNow() {
+        UpdateScheduler.checkNow(appContext)
+        status = "Проверяю новую версию KOT…"
+    }
+
     fun setTaskMode(mode: ConnectionMode) {
         val taskId = selectedTaskId.ifBlank { "chat" }
         selectedTaskMode = mode

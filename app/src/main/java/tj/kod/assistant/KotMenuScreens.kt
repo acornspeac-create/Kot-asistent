@@ -1,6 +1,7 @@
 package tj.kod.assistant
 
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,64 +13,272 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.unit.dp
-
-@Composable
+import androidx.compose.ui.@Composable
 fun KotMainMenuScreen(
     viewModel: AssistantViewModel,
     onOpenTask: (String) -> Unit,
 ) {
+    val profileName = viewModel.profiles.firstOrNull {
+        it.id == viewModel.activeProfileId
+    }?.name ?: "Я"
+
+    val intelligence = setOf(
+        "chat", "models", "voice", "camera", "image", "video",
+    )
+    val tools = setOf(
+        "phone", "files", "automations", "autopilot", "flasher",
+    )
+    val system = setOf(
+        "memory", "profiles", "vault", "backup", "updates", "access",
+    )
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            "KOT",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "● READY",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    Text(
+                        "Личный AI-центр",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        "Профиль: $profileName",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                    )
+                    Text(
+                        viewModel.status,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
+                    )
+                }
+            }
+        }
+
+        item {
             Text(
-                text = "KOT Assistant",
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                text = "Главное меню • профиль: " +
-                    (viewModel.profiles.firstOrNull {
-                        it.id == viewModel.activeProfileId
-                    }?.name ?: "Я"),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = viewModel.status,
-                style = MaterialTheme.typography.bodySmall,
+                "Быстрый запуск",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
         }
 
-        items(KotTasks.all) { task ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { onOpenTask("chat") },
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = task.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = "Режим: " + viewModel.taskModeLabel(task.id),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Button(
-                        onClick = { onOpenTask(task.id) },
+                    Text("Чат")
+                }
+                Button(
+                    onClick = { onOpenTask("models") },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("MAX ИИ")
+                }
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { onOpenTask("autopilot") },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Сделай сам")
+                }
+                Button(
+                    onClick = { onOpenTask("updates") },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Обновление")
+                }
+            }
+        }
+
+        item {
+            DashboardSectionTitle(
+                title = "Интеллект",
+                subtitle = "Модели, голос, зрение и генерация",
+            )
+        }
+
+        items(
+            KotTasks.all.filter { it.id in intelligence },
+            key = { it.id },
+        ) { task ->
+            DashboardTaskCard(
+                task = task,
+                mode = viewModel.taskModeLabel(task.id),
+                onOpen = { onOpenTask(task.id) },
+            )
+        }
+
+        item {
+            DashboardSectionTitle(
+                title = "Инструменты",
+                subtitle = "Телефон, файлы и автоматизация",
+            )
+        }
+
+        items(
+            KotTasks.all.filter { it.id in tools },
+            key = { it.id },
+        ) { task ->
+            DashboardTaskCard(
+                task = task,
+                mode = viewModel.taskModeLabel(task.id),
+                onOpen = { onOpenTask(task.id) },
+            )
+        }
+
+        item {
+            DashboardSectionTitle(
+                title = "Система",
+                subtitle = "Память, защита, резервные копии и обновления",
+            )
+        }
+
+        items(
+            KotTasks.all.filter { it.id in system },
+            key = { it.id },
+        ) { task ->
+            DashboardTaskCard(
+                task = task,
+                mode = viewModel.taskModeLabel(task.id),
+                onOpen = { onOpenTask(task.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardSectionTitle(
+    title: String,
+    subtitle: String,
+) {
+    Column(
+        modifier = Modifier.padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DashboardTaskCard(
+    task: KotTask,
+    mode: String,
+    onOpen: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.32f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Text(
+                task.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                task.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    "Режим: $mode",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "KOT",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF4E8CFF),
+                )
+            }
+            Button(
+                onClick = onOpen,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Открыть")
+            }
+        }
+    }
+}
+
+             onClick = { onOpenTask(task.id) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Открыть")
@@ -416,6 +625,52 @@ fun KotTaskScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Создать резервную копию")
+                    }
+                }
+                if (viewModel.backupStatus.isNotBlank()) {
+                    item { Text(viewModel.backupStatus) }
+                }
+            }
+
+            "updates" -> {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                "Обновление поверх текущей версии",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "KOT проверит GitHub, скачает новый APK и предложит системную установку. Настройки и память приложения сохраняются.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+                item {
+                    Button(
+                        onClick = viewModel::checkForUpdatesNow,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Проверить обновления сейчас")
+                    }
+                }
+                item {
+                    Button(
+                        onClick = viewModel::createBackup,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Создать резервную копию перед обновлением")
                     }
                 }
                 if (viewModel.backupStatus.isNotBlank()) {
