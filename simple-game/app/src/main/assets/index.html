@@ -1232,7 +1232,7 @@ button{border:0;color:#fff;cursor:pointer}
   });
   function floatScore(x,y,text){const d=document.createElement("div");d.className="floatScore";d.textContent=text;d.style.left=x+"px";d.style.top=y+"px";$("#arena").appendChild(d);setTimeout(()=>d.remove(),680)}
   function burst(x,y,gold){
-    const existing=$("#arena .spark");if(existing.length>20)existing.slice(0,existing.length-20).forEach(n=>n.remove());
+    const existing=$$("#arena .spark");if(existing.length>20)existing.slice(0,existing.length-20).forEach(n=>n.remove());
     const count=isLowFx()?4:10;
     for(let i=0;i<count;i++){const s=document.createElement("div");s.className="spark";s.style.left=x+"px";s.style.top=y+"px";s.style.background=gold?"#ffd34d":(i%2?"#78e6ff":"#9b80ff");const a=Math.random()*Math.PI*2,r=25+Math.random()*45;s.style.setProperty("--dx",Math.cos(a)*r+"px");s.style.setProperty("--dy",Math.sin(a)*r+"px");$("#arena").appendChild(s);setTimeout(()=>s.remove(),600)}
   }
