@@ -86,6 +86,20 @@ button{border:0;color:#fff;cursor:pointer}
 .toast{position:absolute;z-index:100;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);padding:11px 16px;border-radius:16px;background:rgba(12,16,29,.95);border:1px solid rgba(255,255,255,.13);opacity:0;pointer-events:none;transition:.2s;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .floatScore{position:absolute;z-index:40;font-size:25px;font-weight:1000;pointer-events:none;animation:fly .65s forwards}@keyframes fly{to{opacity:0;transform:translateY(-70px) scale(1.4)}}
 .spark{position:absolute;z-index:35;width:8px;height:8px;border-radius:50%;background:#fff;pointer-events:none;animation:spark .55s forwards}@keyframes spark{to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.1)}}
+.progressTrack{height:8px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden;margin-top:8px}
+.progressFill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6a5cff,#42d7ff);width:0;transition:width .2s}
+.missionCard{padding:13px;border-radius:18px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px}
+.missionCard.done{border-color:rgba(77,224,139,.48)}
+.rankBanner{display:flex;align-items:center;gap:13px;padding:14px;border-radius:21px;background:linear-gradient(135deg,rgba(255,190,65,.12),rgba(111,92,255,.14));border:1px solid var(--line);margin-top:10px}
+.rankIcon{font-size:38px}.rankBanner b{display:block;font-size:18px}
+#ghostHud{position:absolute;z-index:24;top:58px;left:12px;right:12px;display:none;padding:7px 10px;border-radius:13px;background:rgba(14,15,28,.64);border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(8px);font-size:11px}
+#ghostHud .progressTrack{height:5px;margin-top:5px}
+#eventBanner{position:absolute;z-index:45;top:108px;left:50%;transform:translateX(-50%) scale(.8);opacity:0;padding:9px 15px;border-radius:16px;background:rgba(10,13,24,.88);border:1px solid rgba(255,255,255,.16);font-weight:900;white-space:nowrap;transition:.2s;pointer-events:none}
+#eventBanner.show{opacity:1;transform:translateX(-50%) scale(1)}
+#bossHud{position:absolute;z-index:28;top:88px;left:20%;right:20%;display:none;text-align:center;font-weight:1000;color:#ffb6ff;text-shadow:0 0 12px #b54cff}
+#catTarget.boss{filter:drop-shadow(0 0 18px #ff5dff) drop-shadow(0 0 48px rgba(171,55,255,.9))}
+#catTarget.boss .orb{background:radial-gradient(circle at 35% 28%,#fff 0 6%,#ffd2ff 12%,#ff56dc 36%,#9227d8 65%,#27105c 100%);box-shadow:0 0 50px #db48ff,inset 0 0 22px rgba(255,255,255,.5)}
+.secretRow{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.secretPet{padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:13px}
 @media(max-width:360px){.brand{font-size:20px}.hero h1{font-size:28px}.cardsGrid{grid-template-columns:repeat(3,1fr)}.pill{font-size:12px}.shopGrid,.worlds{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -117,6 +131,23 @@ button{border:0;color:#fff;cursor:pointer}
         <span class="emoji">⚡</span><b id="difficultyTitle">Сложность</b><small id="modeText">Нормально</small>
       </button>
     </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <button class="cardBtn" id="streakCard">
+        <span class="emoji">🔥</span><b id="streakTitle">Серия входов</b><small id="streakText">1 день</small>
+      </button>
+      <button class="cardBtn dailyGlow" id="chestBtn">
+        <span class="emoji">🧰</span><b id="chestTitle">Бесплатный сундук</b><small id="chestText">Открыть</small>
+      </button>
+    </div>
+
+    <div class="rankBanner" id="rankCard">
+      <div class="rankIcon" id="rankIcon">🥉</div>
+      <div class="grow"><b id="rankName">Бронза</b><div class="muted" id="rankProgressText">До следующего ранга</div><div class="progressTrack"><div class="progressFill" id="rankProgress"></div></div></div>
+    </div>
+
+    <div class="section-title" id="missionsTitle">Ежедневные миссии</div>
+    <div id="missionsList"></div>
 
     <div class="section-title" id="quickTitle">Быстрый доступ</div>
     <div class="grid2">
@@ -215,6 +246,14 @@ button{border:0;color:#fff;cursor:pointer}
       <div class="row"><div class="grow"><b>Вибрация</b><div class="muted">Отклик при попадании</div></div><button class="action" id="vibrateToggle">ВКЛ</button></div>
     </div>
     <div class="listCard">
+      <div class="row"><div class="grow"><b id="ghostTitle">Режим «Призрак»</b><div class="muted" id="ghostDesc">Во время игры показывает, насколько близко ты к своему рекорду.</div></div><button class="action" id="ghostToggle">ВКЛ</button></div>
+    </div>
+    <div class="listCard">
+      <b id="secretsTitle">Секретные животные</b>
+      <div class="muted" id="secretsDesc">Открываются за особые достижения.</div>
+      <div class="secretRow" id="secretAnimalsRow"></div>
+    </div>
+    <div class="listCard">
       <div class="row"><div class="grow"><b>Версия онлайн-клиента</b><div class="muted">Готов к подключению backend API и безопасной проверке покупок.</div></div><span>☁️</span></div>
     </div>
   </section>
@@ -248,6 +287,9 @@ button{border:0;color:#fff;cursor:pointer}
         <button class="pill" id="pauseBtn">Ⅱ</button>
       </div>
       <div id="combo"></div>
+      <div id="ghostHud"><span id="ghostText">👻 0 / 0</span><div class="progressTrack"><div class="progressFill" id="ghostProgress"></div></div></div>
+      <div id="eventBanner">⚡ Событие</div>
+      <div id="bossHud">👹 БОСС <span id="bossHpText">0/0</span></div>
       <div id="catTarget">
         <span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>
         <div class="ear l"></div><div class="ear r"></div>
@@ -303,7 +345,9 @@ button{border:0;color:#fff;cursor:pointer}
     nickname:"Игрок",guestId:"KOT-"+Math.random().toString(36).slice(2,8).toUpperCase(),
     sound:true,vibrate:true,soundType:"cat",language:"ru",world:0,mode:"normal",skin:"cat",
     ownedSkins:["cat"],cards:[0,1,2,3,4,5],lastDaily:"",
-    powers:{freeze:2,shield:1,double:1},worldsPlayed:{},achievements:{}
+    powers:{freeze:2,shield:1,double:1},worldsPlayed:{},achievements:{},
+    loginStreak:0,bestStreak:0,lastLoginDate:"",lastFreeChest:0,chestsOpened:0,bossWins:0,
+    ghostEnabled:true,secretAnimals:[],missionState:{date:"",items:[]},dailyMissionBonusDate:""
   };
   function readSavedState(){
     let raw="";
@@ -325,6 +369,9 @@ button{border:0;color:#fff;cursor:pointer}
   state.achievements=state.achievements||{};
   state.ownedSkins=state.ownedSkins||["cat"];
   state.cards=Array.from(new Set((state.cards||[]).map(Number))).filter(n=>n>=0&&n<1000);
+  state.secretAnimals=Array.from(new Set(state.secretAnimals||[]));
+  state.missionState=state.missionState&&Array.isArray(state.missionState.items)?state.missionState:{date:"",items:[]};
+  if(typeof state.ghostEnabled!=="boolean")state.ghostEnabled=true;
 
   const I18N={
     ru:{
@@ -388,6 +435,13 @@ button{border:0;color:#fff;cursor:pointer}
       voiceCat:"🐱 猫 — 喵",voiceDog:"🐶 狗 — 汪",voiceBird:"🐦 鸟 — 啾",voiceTiger:"🐯 老虎 — 吼",voiceLion:"🦁 狮子 — 吼",voiceFrog:"🐸 青蛙 — 呱",voiceOwl:"🦉 猫头鹰 — 咕",voiceMouse:"🐭 老鼠 — 吱"
     }
   };
+  const I18N23={
+    ru:{streak:"Серия входов",day:"день",days:"дней",freeChest:"Бесплатный сундук",open:"Открыть",ready:"Готово!",missions:"Ежедневные миссии",ghost:"Режим «Призрак»",ghostDesc:"Показывает, насколько близко ты к своему рекорду.",secrets:"Секретные животные",secretsDesc:"Открываются за особые достижения.",rankNext:"До следующего ранга",rankMax:"Максимальный ранг",claim:"Забрать",claimed:"Получено",missionBonus:"Все миссии выполнены! Бонус",boss:"БОСС",rankBronze:"Бронза",rankSilver:"Серебро",rankGold:"Золото",rankPlatinum:"Платина",rankDiamond:"Алмаз",rankMaster:"Мастер",rankLegend:"Легенда"},
+    en:{streak:"Login streak",day:"day",days:"days",freeChest:"Free chest",open:"Open",ready:"Ready!",missions:"Daily missions",ghost:"Ghost mode",ghostDesc:"Shows how close you are to beating your best score.",secrets:"Secret animals",secretsDesc:"Unlock through special achievements.",rankNext:"Until next rank",rankMax:"Maximum rank",claim:"Claim",claimed:"Claimed",missionBonus:"All missions complete! Bonus",boss:"BOSS",rankBronze:"Bronze",rankSilver:"Silver",rankGold:"Gold",rankPlatinum:"Platinum",rankDiamond:"Diamond",rankMaster:"Master",rankLegend:"Legend"},
+    ja:{streak:"ログイン連続記録",day:"日",days:"日",freeChest:"無料チェスト",open:"開ける",ready:"準備完了！",missions:"デイリーミッション",ghost:"ゴーストモード",ghostDesc:"自己ベストまでの距離を表示します。",secrets:"シークレット動物",secretsDesc:"特別な実績で解放されます。",rankNext:"次のランクまで",rankMax:"最高ランク",claim:"受け取る",claimed:"受取済み",missionBonus:"全ミッション達成！ボーナス",boss:"ボス",rankBronze:"ブロンズ",rankSilver:"シルバー",rankGold:"ゴールド",rankPlatinum:"プラチナ",rankDiamond:"ダイヤ",rankMaster:"マスター",rankLegend:"レジェンド"},
+    zh:{streak:"连续登录",day:"天",days:"天",freeChest:"免费宝箱",open:"打开",ready:"可以领取！",missions:"每日任务",ghost:"幽灵模式",ghostDesc:"显示你距离打破最高分还有多远。",secrets:"秘密动物",secretsDesc:"通过特殊成就解锁。",rankNext:"距离下一段位",rankMax:"最高段位",claim:"领取",claimed:"已领取",missionBonus:"全部任务完成！奖励",boss:"首领",rankBronze:"青铜",rankSilver:"白银",rankGold:"黄金",rankPlatinum:"铂金",rankDiamond:"钻石",rankMaster:"大师",rankLegend:"传奇"}
+  };
+  Object.keys(I18N23).forEach(lang=>Object.assign(I18N[lang],I18N23[lang]));
   function tr(k){const lang=I18N[state.language]||I18N.ru;return lang[k]||I18N.ru[k]||k}
   function setTxt(id,key,html){
     const el=$("#"+id);if(!el)return;
@@ -405,6 +459,7 @@ button{border:0;color:#fff;cursor:pointer}
       shopTitle:"shop",shopSkinsTitle:"skins",shopPowersTitle:"powers",shopCoinsTitle:"realCoins",shopAdsTitle:"ads",
       collectionTitle:"collectionTitle",profileTitle:"profile",achievementsTitle:"achievements",onlineProfileTitle:"onlineProfile",
       settingsTitle:"settings",languageTitle:"language",languageDesc:"languageDesc",voiceTitle:"voice",voiceDesc:"voiceDesc",
+      streakTitle:"streak",chestTitle:"freeChest",missionsTitle:"missions",ghostTitle:"ghost",ghostDesc:"ghostDesc",secretsTitle:"secrets",secretsDesc:"secretsDesc",
       navHome:"navHome",navWorlds:"navWorlds",navShop:"navShop",navCards:"navCards",navProfile:"navProfile",onlineTitle:"online"
     };
     Object.keys(map).forEach(id=>setTxt(id,map[id]));
@@ -453,7 +508,12 @@ button{border:0;color:#fff;cursor:pointer}
     {id:"alien",name:"Космо-кот",emoji:"👽",price:1500},
     {id:"ghost",name:"Призрак",emoji:"👻",price:1700},
     {id:"crown",name:"Королевский кот",emoji:"👑",price:2200},
-    {id:"diamond",name:"Алмазный кот",emoji:"💎",price:3000}
+    {id:"diamond",name:"Алмазный кот",emoji:"💎",price:3000},
+    {id:"shadowcat",name:"Теневой кот",emoji:"🌑",price:0,secret:true},
+    {id:"axolotl",name:"Аксолотль",emoji:"🦎",price:0,secret:true},
+    {id:"ninja",name:"Ниндзя-кот",emoji:"🥷",price:0,secret:true},
+    {id:"phoenix",name:"Феникс",emoji:"🐦‍🔥",price:0,secret:true},
+    {id:"spirit",name:"Дух-лис",emoji:"🦊",price:0,secret:true}
   ];
 
   const animals=[
@@ -484,8 +544,87 @@ button{border:0;color:#fff;cursor:pointer}
     {id:"combo10",emoji:"⚡",name:"Комбо-мастер",desc:"Комбо ×10",ok:s=>s.maxCombo>=10},
     {id:"coins1000",emoji:"🪙",name:"Копилка",desc:"Накопить 1000 монет",ok:s=>s.coins>=1000},
     {id:"cards25",emoji:"🃏",name:"Коллекционер",desc:"25 карточек",ok:s=>s.cards.length>=25},
-    {id:"maps5",emoji:"🌌",name:"Путешественник",desc:"Сыграть в 5 мирах",ok:s=>Object.keys(s.worldsPlayed).length>=5}
+    {id:"maps5",emoji:"🌌",name:"Путешественник",desc:"Сыграть в 5 мирах",ok:s=>Object.keys(s.worldsPlayed).length>=5},
+    {id:"boss1",emoji:"👹",name:"Укротитель босса",desc:"Победить первого босса",ok:s=>s.bossWins>=1},
+    {id:"chest10",emoji:"🧰",name:"Охотник за сокровищами",desc:"Открыть 10 сундуков",ok:s=>s.chestsOpened>=10},
+    {id:"streak7",emoji:"🔥",name:"Неделя с KOT",desc:"Серия входов 7 дней",ok:s=>s.bestStreak>=7}
   ];
+
+  const CHEST_MS=4*60*60*1000;
+  const RANKS=[
+    {key:"rankBronze",icon:"🥉",min:0,next:500},
+    {key:"rankSilver",icon:"🥈",min:500,next:1500},
+    {key:"rankGold",icon:"🥇",min:1500,next:3000},
+    {key:"rankPlatinum",icon:"💠",min:3000,next:6000},
+    {key:"rankDiamond",icon:"💎",min:6000,next:10000},
+    {key:"rankMaster",icon:"👑",min:10000,next:16000},
+    {key:"rankLegend",icon:"🌟",min:16000,next:null}
+  ];
+  const MISSION_POOL=[
+    {type:"hits",target:30,reward:80,emoji:"🎯",labels:{ru:"Попади 30 раз",en:"Hit 30 targets",ja:"30回ヒット",zh:"命中30次"}},
+    {type:"games",target:3,reward:90,emoji:"🎮",labels:{ru:"Сыграй 3 игры",en:"Play 3 games",ja:"3ゲームプレイ",zh:"进行3场游戏"}},
+    {type:"score",target:60,reward:100,emoji:"⭐",labels:{ru:"Набери 60 очков",en:"Earn 60 points",ja:"60ポイント獲得",zh:"获得60分"}},
+    {type:"combo",target:8,reward:110,emoji:"⚡",labels:{ru:"Сделай комбо ×8",en:"Reach combo ×8",ja:"コンボ×8を達成",zh:"达到8连击"}},
+    {type:"golden",target:2,reward:130,emoji:"✨",labels:{ru:"Поймай 2 золотых котов",en:"Catch 2 golden cats",ja:"ゴールドネコを2匹捕獲",zh:"抓住2只金色猫"}},
+    {type:"boss",target:1,reward:180,emoji:"👹",labels:{ru:"Победи босса",en:"Defeat a boss",ja:"ボスを倒す",zh:"击败一个首领"}}
+  ];
+  const SECRET_RULES=[
+    {id:"shadowcat",emoji:"🌑",ok:s=>s.bossWins>=1},
+    {id:"axolotl",emoji:"🦎",ok:s=>s.chestsOpened>=3},
+    {id:"ninja",emoji:"🥷",ok:s=>s.best>=75},
+    {id:"phoenix",emoji:"🐦‍🔥",ok:s=>s.cards.length>=75},
+    {id:"spirit",emoji:"🦊",ok:s=>s.bestStreak>=7}
+  ];
+  function dateNumber(key){
+    if(!key)return NaN;
+    const p=key.split("-").map(Number);
+    return Math.floor(new Date(p[0],p[1]-1,p[2]).getTime()/86400000);
+  }
+  function updateLoginStreak(){
+    const t=today();
+    if(state.lastLoginDate===t)return;
+    const diff=dateNumber(t)-dateNumber(state.lastLoginDate);
+    state.loginStreak=(diff===1)?Math.max(1,(state.loginStreak||0)+1):1;
+    state.bestStreak=Math.max(state.bestStreak||0,state.loginStreak);
+    state.lastLoginDate=t;
+  }
+  function rankInfo(){
+    const xp=state.xp||0;
+    for(let i=RANKS.length-1;i>=0;i--)if(xp>=RANKS[i].min)return RANKS[i];
+    return RANKS[0];
+  }
+  function ensureMissions(){
+    const t=today();
+    if(state.missionState.date===t&&state.missionState.items.length===3)return;
+    const seed=dateNumber(t)||1;
+    const indexes=[seed%MISSION_POOL.length,(seed+2)%MISSION_POOL.length,(seed+4)%MISSION_POOL.length];
+    state.missionState={date:t,items:indexes.map(i=>({type:MISSION_POOL[i].type,target:MISSION_POOL[i].target,reward:MISSION_POOL[i].reward,progress:0,claimed:false}))};
+  }
+  function addMissionProgress(type,amount,asMax){
+    ensureMissions();
+    state.missionState.items.forEach(m=>{
+      if(m.type!==type||m.claimed)return;
+      m.progress=asMax?Math.max(m.progress||0,amount):Math.min(m.target,(m.progress||0)+amount);
+    });
+  }
+  function missionDef(type){return MISSION_POOL.find(x=>x.type===type)}
+  function checkSecretUnlocks(showToast){
+    const newly=[];
+    SECRET_RULES.forEach(r=>{
+      if(r.ok(state)&&!state.secretAnimals.includes(r.id)){
+        state.secretAnimals.push(r.id);
+        if(!state.ownedSkins.includes(r.id))state.ownedSkins.push(r.id);
+        newly.push(r);
+      }
+    });
+    if(showToast&&newly.length)toast("🔐 "+newly.map(x=>x.emoji).join(" ")+" Secret!");
+    return newly;
+  }
+  function formatWait(ms){
+    if(ms<=0)return tr("ready");
+    const total=Math.ceil(ms/60000),h=Math.floor(total/60),m=total%60;
+    return h>0?h+"h "+m+"m":m+"m";
+  }
 
   function save(){
     const json=JSON.stringify(state);
@@ -575,7 +714,44 @@ button{border:0;color:#fff;cursor:pointer}
     $("#modeText").textContent=tr(state.mode);
     $("#dailyText").textContent=state.lastDaily===today()?tr("dailyDone"):tr("dailyClaim");
     $("#languageSelect").value=state.language;
-    renderWorlds();renderShop();renderMoneyShop();renderCards();renderAchievements();applyLanguage();
+    $("#ghostToggle").textContent=state.ghostEnabled?"ВКЛ":"ВЫКЛ";
+    renderWorlds();renderShop();renderMoneyShop();renderCards();renderAchievements();renderMissions();renderMetaProgress();applyLanguage();
+  }
+
+  function renderMetaProgress(){
+    const r=rankInfo(),idx=RANKS.indexOf(r);
+    $("#rankIcon").textContent=r.icon;$("#rankName").textContent=tr(r.key);
+    if(r.next){
+      const pct=Math.max(0,Math.min(100,((state.xp-r.min)/(r.next-r.min))*100));
+      $("#rankProgress").style.width=pct+"%";
+      $("#rankProgressText").textContent=tr("rankNext")+": "+Math.max(0,r.next-state.xp)+" XP";
+    }else{
+      $("#rankProgress").style.width="100%";$("#rankProgressText").textContent=tr("rankMax");
+    }
+    $("#streakText").textContent=(state.loginStreak||1)+" "+((state.language==="ru"&&state.loginStreak===1)?tr("day"):tr("days"));
+    const left=CHEST_MS-(Date.now()-(state.lastFreeChest||0));
+    $("#chestText").textContent=left<=0?tr("ready"):formatWait(left);
+    $("#chestBtn").disabled=left>0;
+    $("#secretAnimalsRow").innerHTML=SECRET_RULES.map(x=>'<span class="secretPet">'+(state.secretAnimals.includes(x.id)?x.emoji:"❓")+'</span>').join("");
+  }
+  function renderMissions(){
+    ensureMissions();
+    $("#missionsList").innerHTML=state.missionState.items.map((m,i)=>{
+      const d=missionDef(m.type),done=(m.progress||0)>=m.target;
+      const label=d.labels[state.language]||d.labels.ru;
+      return '<div class="missionCard '+(done?"done":"")+'"><div class="row"><div style="font-size:25px">'+d.emoji+'</div><div class="grow"><b>'+label+'</b><div class="muted">'+Math.min(m.target,m.progress||0)+' / '+m.target+' · 🪙 '+m.reward+'</div><div class="progressTrack"><div class="progressFill" style="width:'+Math.min(100,((m.progress||0)/m.target)*100)+'%"></div></div></div><button class="action missionClaim" data-mission="'+i+'" '+(!done||m.claimed?"disabled":"")+'>'+(m.claimed?tr("claimed"):tr("claim"))+'</button></div></div>';
+    }).join("");
+    $(".missionClaim").forEach(b=>b.addEventListener("click",()=>claimMission(Number(b.dataset.mission))));
+  }
+  function claimMission(i){
+    const m=state.missionState.items[i];if(!m||m.claimed||(m.progress||0)<m.target)return;
+    m.claimed=true;state.coins+=m.reward;
+    const all=state.missionState.items.every(x=>x.claimed);
+    let bonus="";
+    if(all&&state.dailyMissionBonusDate!==today()){
+      state.dailyMissionBonusDate=today();state.coins+=150;const card=unlockRandomCard();bonus=" +150 🪙"+(card?" +🃏":"");
+    }
+    save();rewardSound();toast("+"+m.reward+" 🪙"+bonus);
   }
 
   const screens=["home","worlds","shop","collection","profile","online","game"];
@@ -595,11 +771,12 @@ button{border:0;color:#fff;cursor:pointer}
   }
 
   function renderShop(){
-    $("#skinsGrid").innerHTML=skins.map(s=>{
+    const visibleSkins=skins.filter(s=>!s.secret||state.secretAnimals.includes(s.id));
+    $("#skinsGrid").innerHTML=visibleSkins.map(s=>{
       const owned=state.ownedSkins.includes(s.id),active=state.skin===s.id;
       return '<div class="shopItem"><div class="preview">'+s.emoji+'</div><b>'+s.name+'</b><small>'+(active?tr("used"):owned?tr("owned"):tr("targetSkin"))+'</small><button class="priceBtn" data-skin="'+s.id+'">'+(active?tr("selected"):owned?tr("select"):'🪙 '+s.price)+'</button></div>';
     }).join("");
-    $$("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
+    $("#skinsGrid [data-skin]").forEach(b=>b.addEventListener("click",()=>buySkin(b.dataset.skin)));
     const p=[["freeze","❄️","Заморозка","Котик стоит 3 секунды",90],["shield","🛡️","Щит","Защищает от одного промаха",110],["double","×2","Двойные очки","10 секунд ×2 очков",130]];
     $("#powerShop").innerHTML=p.map(x=>'<div class="shopItem"><div class="preview">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' · есть '+state.powers[x[0]]+'</small><button class="priceBtn" data-power="'+x[0]+'">🪙 '+x[4]+'</button></div>').join("");
     $$("#powerShop [data-power]").forEach(b=>b.addEventListener("click",()=>buyPower(b.dataset.power)));
@@ -692,9 +869,25 @@ button{border:0;color:#fff;cursor:pointer}
   }
 
   $("#dailyBtn").addEventListener("click",()=>{
-    if(state.lastDaily===today()){toast("Сегодня награда уже получена");return}
-    state.lastDaily=today();state.coins+=150;state.powers.freeze++;const card=unlockRandomCard();save();rewardSound();toast(card?"+150 монет · новая карточка!":"+150 монет");
+    if(state.lastDaily===today()){toast(tr("dailyDone"));return}
+    const streak=Math.max(1,state.loginStreak||1);
+    let reward=150+Math.min(300,(streak-1)*15),cards=1;
+    if(streak%7===0)reward+=500;
+    if(streak%30===0){reward+=2000;cards=4}
+    state.lastDaily=today();state.coins+=reward;state.powers.freeze++;
+    let card=null;for(let i=0;i<cards;i++)card=unlockRandomCard()||card;
+    checkSecretUnlocks(false);save();rewardSound();toast("🔥 "+streak+" · +"+reward+" 🪙"+(card?" · 🃏":""));
   });
+  $("#chestBtn").addEventListener("click",()=>{
+    const left=CHEST_MS-(Date.now()-(state.lastFreeChest||0));if(left>0){toast(formatWait(left));return}
+    state.lastFreeChest=Date.now();state.chestsOpened=(state.chestsOpened||0)+1;
+    const reward=80+Math.floor(Math.random()*141);state.coins+=reward;
+    let extra="";
+    if(Math.random()<.48){const card=unlockRandomCard();if(card)extra+=" +🃏"}
+    if(Math.random()<.28){const keys=["freeze","shield","double"],k=keys[Math.floor(Math.random()*keys.length)];state.powers[k]=(state.powers[k]||0)+1;extra+=" +⚡"}
+    checkSecretUnlocks(true);save();rewardSound();toast("🧰 +"+reward+" 🪙"+extra);
+  });
+  $("#ghostToggle").addEventListener("click",()=>{state.ghostEnabled=!state.ghostEnabled;save();});
 
   $("#saveProfile").addEventListener("click",()=>{
     const n=$("#nicknameInput").value.trim().slice(0,18);state.nickname=n||"Игрок";save();toast("Профиль сохранён");
@@ -723,12 +916,21 @@ button{border:0;color:#fff;cursor:pointer}
   let score=0,lives=3,combo=0,runCoins=0,running=false,paused=false;
   let targetSize=94,jumpInterval=540,roundTime=2250,jumpTimer=null,missTimer=null;
   let frozenUntil=0,shieldActive=false,doubleUntil=0,golden=false,gameLevel=1;
+  let bossActive=false,bossHP=0,bossMaxHP=0,bossLevelSeen=0;
+  let oldBestAtStart=0,eventHitCounter=0,eventNextAt=7,eventSlowUntil=0,eventCoinHits=0,eventBigHits=0,eventGoldHits=0;
 
   function clearTimers(){clearTimeout(jumpTimer);clearTimeout(missTimer);jumpTimer=null;missTimer=null}
   function updateGameHud(){
     $("#gameScore").textContent=score;$("#gameLives").textContent=lives;$("#runCoins").textContent=runCoins;
     $("#freezeCount").textContent=state.powers.freeze||0;$("#shieldCount").textContent=state.powers.shield||0;$("#doubleCount").textContent=state.powers.double||0;
     $("#shieldBtn").style.outline=shieldActive?"2px solid #75ffb1":"none";
+    const ghost=$("#ghostHud");
+    if(state.ghostEnabled&&oldBestAtStart>0){
+      ghost.style.display="block";$("#ghostText").textContent="👻 "+score+" / "+oldBestAtStart;
+      $("#ghostProgress").style.width=Math.min(100,(score/oldBestAtStart)*100)+"%";
+    }else ghost.style.display="none";
+    $("#bossHud").style.display=bossActive?"block":"none";
+    if(bossActive)$("#bossHpText").textContent=bossHP+"/"+bossMaxHP;
   }
   function applyWorld(){
     $("#arena").style.background=worlds[state.world][2];
@@ -746,6 +948,8 @@ button{border:0;color:#fff;cursor:pointer}
   }
   function startGame(){
     ctx();clearTimers();score=0;lives=3;combo=0;runCoins=0;running=true;paused=false;shieldActive=false;doubleUntil=0;
+    bossActive=false;bossHP=0;bossMaxHP=0;bossLevelSeen=0;oldBestAtStart=state.best||0;
+    eventHitCounter=0;eventNextAt=6+Math.floor(Math.random()*5);eventSlowUntil=0;eventCoinHits=0;eventBigHits=0;eventGoldHits=0;
     const m=modes[state.mode];targetSize=m.size;jumpInterval=m.jump;roundTime=m.round;gameLevel=1;
     state.worldsPlayed[state.world]=true;
     applyWorld();applySkin();showScreen("game");$("#resultOverlay").classList.remove("show");$("#pauseOverlay").classList.remove("show");$("#catTarget").style.display="block";
@@ -757,27 +961,50 @@ button{border:0;color:#fff;cursor:pointer}
   function moveTarget(first){
     if(!running||paused||Date.now()<frozenUntil)return;
     const t=$("#catTarget"),pad=12,top=80,bottom=92;
-    t.style.width=targetSize+"px";t.style.height=targetSize+"px";
-    const maxX=Math.max(pad,innerWidth-targetSize-pad),maxY=Math.max(top,innerHeight-targetSize-bottom);
+    const sizeNow=targetSize*(bossActive?1.34:(eventBigHits>0?1.35:1));
+    t.style.width=sizeNow+"px";t.style.height=sizeNow+"px";
+    const maxX=Math.max(pad,innerWidth-sizeNow-pad),maxY=Math.max(top,innerHeight-sizeNow-bottom);
     let x=pad+Math.random()*Math.max(1,maxX-pad),y=top+Math.random()*Math.max(1,maxY-top);
     if(!first){
       const ox=parseFloat(t.style.left)||0,oy=parseFloat(t.style.top)||top;
-      for(let n=0;n<6;n++){if(Math.abs(x-ox)>targetSize*1.5||Math.abs(y-oy)>targetSize*1.5)break;x=pad+Math.random()*Math.max(1,maxX-pad);y=top+Math.random()*Math.max(1,maxY-top)}
+      for(let n=0;n<6;n++){if(Math.abs(x-ox)>sizeNow*1.5||Math.abs(y-oy)>sizeNow*1.5)break;x=pad+Math.random()*Math.max(1,maxX-pad);y=top+Math.random()*Math.max(1,maxY-top)}
       t.classList.add("jump");setTimeout(()=>t.classList.remove("jump"),90);
     }
     t.style.left=x+"px";t.style.top=y+"px";
   }
   function scheduleJump(){
     clearTimeout(jumpTimer);if(!running||paused)return;
-    const wait=Math.max(130,jumpInterval+(Math.random()*100-50));
+    const slow=Date.now()<eventSlowUntil?1.7:1;
+    const wait=Math.max(130,(jumpInterval+(Math.random()*100-50))*slow);
     jumpTimer=setTimeout(()=>{
       if(Date.now()<frozenUntil){scheduleJump();return}
       moveTarget(false);scheduleJump();
     },wait);
   }
   function startRound(){
-    if(!running)return;clearTimers();golden=Math.random()<.085;$("#catTarget").classList.toggle("golden",golden);moveTarget(true);
-    missTimer=setTimeout(()=>miss(),roundTime);scheduleJump();
+    if(!running)return;clearTimers();
+    if(!bossActive&&gameLevel>=10&&gameLevel%10===0&&bossLevelSeen!==gameLevel){
+      bossActive=true;bossMaxHP=5+Math.floor(gameLevel/5);bossHP=bossMaxHP;golden=false;
+      showGameEvent("👹 "+tr("boss")+" · HP "+bossHP);meow(.62);
+    }else if(!bossActive){
+      golden=eventGoldHits>0?true:Math.random()<.085;
+      if(eventGoldHits>0)eventGoldHits--;
+    }else golden=false;
+    $("#catTarget").classList.toggle("golden",golden);$("#catTarget").classList.toggle("boss",bossActive);moveTarget(true);
+    updateGameHud();
+    missTimer=setTimeout(()=>miss(),bossActive?roundTime*1.35:roundTime);scheduleJump();
+  }
+  function showGameEvent(text){
+    const b=$("#eventBanner");b.textContent=text;b.classList.add("show");clearTimeout(b._tm);b._tm=setTimeout(()=>b.classList.remove("show"),1700);
+  }
+  function maybeTriggerEvent(){
+    if(bossActive||eventHitCounter<eventNextAt)return;
+    eventNextAt=eventHitCounter+7+Math.floor(Math.random()*7);
+    const n=Math.floor(Math.random()*4);
+    if(n===0){eventSlowUntil=Date.now()+5000;showGameEvent("🐌 SLOW TIME · 5s")}
+    else if(n===1){eventCoinHits=6;showGameEvent("🪙 COIN RUSH · 6")}
+    else if(n===2){eventBigHits=5;showGameEvent("🐘 GIANT TARGET · 5")}
+    else{eventGoldHits=3;showGameEvent("✨ GOLD RUSH · 3")}
   }
   function miss(){
     if(!running||paused)return;clearTimers();combo=0;
@@ -785,18 +1012,35 @@ button{border:0;color:#fff;cursor:pointer}
     lives--;vibrate(80);updateGameHud();if(lives<=0)endGame();else startRound();
   }
   $("#catTarget").addEventListener("pointerdown",e=>{
-    if(!running||paused)return;e.stopPropagation();clearTimers();combo++;state.totalHits++;
-    const mult=Date.now()<doubleUntil?2:1,base=1+Math.floor(combo/5),points=base*mult;score+=points;
-    const coinGain=modes[state.mode].coin*(golden?10:1);runCoins+=coinGain;
+    if(!running||paused)return;e.stopPropagation();clearTimers();combo++;state.totalHits++;addMissionProgress("hits",1);addMissionProgress("combo",combo,true);
+    if(bossActive){
+      bossHP--;runCoins+=2;burst(e.clientX,e.clientY,false);floatScore(e.clientX,e.clientY,"💥 "+bossHP);vibrate(35);growl(125,.28,1);
+      if(bossHP<=0){
+        const defeatedLevel=gameLevel;bossActive=false;bossLevelSeen=defeatedLevel;state.bossWins=(state.bossWins||0)+1;addMissionProgress("boss",1);
+        runCoins+=50;score+=10;const card=unlockRandomCard();checkSecretUnlocks(true);
+        showGameEvent("🏆 BOSS DOWN · +50 🪙"+(card?" · 🃏":""));
+        gameLevel=1+Math.floor(score/10);
+        const m=modes[state.mode];targetSize=Math.max(34,m.size-(gameLevel-1)*3.2);jumpInterval=Math.max(145,m.jump-(gameLevel-1)*24);roundTime=Math.max(850,m.round-(gameLevel-1)*70);
+        updateGameHud();startRound();
+      }else{
+        updateGameHud();moveTarget(false);missTimer=setTimeout(()=>miss(),roundTime*1.35);scheduleJump();
+      }
+      return;
+    }
+    const mult=Date.now()<doubleUntil?2:1,base=1+Math.floor(combo/5),points=base*mult;score+=points;addMissionProgress("score",points);
+    let coinGain=modes[state.mode].coin*(golden?10:1);
+    if(eventCoinHits>0){coinGain+=3;eventCoinHits--}
+    if(eventBigHits>0)eventBigHits--;
+    runCoins+=coinGain;
     state.maxCombo=Math.max(state.maxCombo,combo);
     burst(e.clientX,e.clientY,golden);floatScore(e.clientX,e.clientY,"+"+points+(golden?" ✨":""));
     vibrate(golden?45:18);meow(golden?1.35:(.9+Math.random()*.22));
-    if(golden){const card=unlockRandomCard();if(card)toast("Золотой кот! Открыта: "+card.name)}
+    if(golden){addMissionProgress("golden",1);const card=unlockRandomCard();if(card)toast("✨ +🃏 "+card.name)}
     if(combo>=3){$("#combo").textContent="🔥 КОМБО x"+combo;$("#combo").style.opacity=1;$("#combo").style.transform="scale(1)";setTimeout(()=>$("#combo").style.opacity=0,320)}
     gameLevel=1+Math.floor(score/10);
     const m=modes[state.mode];targetSize=Math.max(34,m.size-(gameLevel-1)*3.2);jumpInterval=Math.max(145,m.jump-(gameLevel-1)*24);roundTime=Math.max(850,m.round-(gameLevel-1)*70);
-    $("#levelText").textContent="Уровень "+gameLevel+" · прыжок "+(jumpInterval/1000).toFixed(2)+" сек";
-    updateGameHud();startRound();
+    $("#levelText").textContent=tr("level")+" "+gameLevel+" · "+(jumpInterval/1000).toFixed(2)+"s";
+    eventHitCounter++;maybeTriggerEvent();updateGameHud();startRound();
   });
   $("#arena").addEventListener("pointerdown",e=>{if(!running||paused||e.target.closest("#catTarget")||e.target.closest(".powerBar")||e.target.closest(".gameHud"))return;miss()});
 
@@ -818,9 +1062,9 @@ button{border:0;color:#fff;cursor:pointer}
 
   function endGame(){
     running=false;clearTimers();$("#catTarget").style.display="none";
-    state.games++;state.coins+=runCoins;state.xp+=Math.max(5,score);const oldBest=state.best;if(score>state.best)state.best=score;
+    state.games++;addMissionProgress("games",1);state.coins+=runCoins;state.xp+=Math.max(5,score);const oldBest=state.best;if(score>state.best)state.best=score;
     let bonusCard=null;if(score>=10&&Math.random()<Math.min(.8,.25+score/150))bonusCard=unlockRandomCard();
-    achievements.forEach(a=>{if(a.ok(state))state.achievements[a.id]=true});
+    achievements.forEach(a=>{if(a.ok(state))state.achievements[a.id]=true});checkSecretUnlocks(true);
     save();rewardSound();
     $("#resultEmoji").textContent=score>oldBest&&score>0?"🏆":"😺";
     $("#resultTitle").textContent=score>oldBest&&score>0?"Новый рекорд!":"Забег окончен";
@@ -829,7 +1073,8 @@ button{border:0;color:#fff;cursor:pointer}
   }
   $("#resultHomeBtn").addEventListener("click",()=>{$("#resultOverlay").classList.remove("show");showScreen("home")});
 
-  refreshAll();
+  updateLoginStreak();ensureMissions();checkSecretUnlocks(false);refreshAll();
+  setInterval(()=>{if(!running)renderMetaProgress()},30000);
   try{
     if(window.AndroidSecureStore&&AndroidSecureStore.save){
       AndroidSecureStore.save(JSON.stringify(state));
