@@ -1162,7 +1162,7 @@ private fun CommandBox(
             Text(if (viewModel.busy) "Выполняю…" else "Выполнить")
         }
 
-        viewModel.messages.takeLast(4).forEach { message ->
+        viewModel.visibleTaskMessages().takeLast(6).forEach { message ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(10.dp)) {
                     Text(

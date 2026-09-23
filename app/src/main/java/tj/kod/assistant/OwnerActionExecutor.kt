@@ -129,6 +129,25 @@ class OwnerActionExecutor(
             }
         }
 
+        val bareAppAliases = mapOf(
+            "ютуб" to "YouTube",
+            "youtube" to "YouTube",
+            "телеграм" to "Telegram",
+            "telegram" to "Telegram",
+            "ватсап" to "WhatsApp",
+            "whatsapp" to "WhatsApp",
+            "тикток" to "TikTok",
+            "tiktok" to "TikTok",
+            "инстаграм" to "Instagram",
+            "instagram" to "Instagram",
+            "хром" to "Chrome",
+            "chrome" to "Chrome",
+        )
+
+        bareAppAliases[lower]?.let { appName ->
+            return openInstalledApp(appName)
+        }
+
         return null
     }
 

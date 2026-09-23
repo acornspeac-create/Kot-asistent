@@ -98,6 +98,7 @@ class AssistantViewModel(
     var coreStatus by mutableStateOf("Ядро готово к изменениям")
     var coreLastBackupBranch by mutableStateOf(settings.coreLastBackupBranch())
     var coreBusy by mutableStateOf(false)
+    var taskMessageStartIndex by mutableStateOf(0)
 
     init {
         messages.addAll(memory.load())
@@ -113,12 +114,25 @@ class AssistantViewModel(
     fun openTask(taskId: String) {
         selectedTaskId = taskId
         selectedTaskMode = settings.taskMode(taskId)
+        taskMessageStartIndex = if (taskId == "chat") {
+            (messages.size - 4).coerceAtLeast(0)
+        } else {
+            messages.size
+        }
 
         when (taskId) {
             "flasher" -> showFlasher = true
             "access" -> showAccess = true
         }
     }
+
+    fun visibleTaskMessages(): List<Message> =
+        messages.drop(
+            taskMessageStartIndex.coerceIn(
+                0,
+                messages.size,
+            )
+        )
 
     fun closeTask() {
         selectedTaskId = ""
@@ -1216,6 +1230,81 @@ class AssistantViewModel(
         messages += userMessage
         memory.append(userMessage)
 
+        if (isImageGenerationRequest(clean)) {
+            val prompt = extractImagePrompt(clean)
+
+            selectedTaskId = "image"
+            selectedTaskMode = settings.taskMode("image")
+            taskMessageStartIndex =
+                (messages.size - 1).coerceAtLeast(0)
+
+            if (prompt.isBlank()) {
+                val directReply =
+                    "Что именно нарисовать? Например: «создай изображение чёрного BMW ночью»."
+                val assistantMessage = Message("assistant", directReply)
+                messages += assistantMessage
+                memory.append(assistantMessage)
+                status = "Жду описание изображения"
+                onReply(directReply)
+                return
+            }
+
+            val modelPath = offlineImageModelPath.trim()
+
+            if (modelPath.isBlank() || !File(modelPath).isFile) {
+                val directReply =
+                    "Я понял, что нужно создать изображение. Открыл раздел генерации фото, но локальная модель ещё не установлена. Сначала скачай модель фото в «Офлайн-модели»."
+                val assistantMessage = Message("assistant", directReply)
+                messages += assistantMessage
+                memory.append(assistantMessage)
+                imageModelStatus = "Нужна локальная модель изображения"
+                status = "Открыта генерация фото"
+                onReply(directReply)
+                return
+            }
+
+            viewModelScope.launch {
+                busy = true
+                status = "Генерирую изображение…"
+                imageModelStatus =
+                    "Генерирую полностью офлайн • CPU • 512×512…"
+
+                runCatching {
+                    localImage.generate(
+                        modelPath = modelPath,
+                        prompt = prompt,
+                        width = 512,
+                        height = 512,
+                        steps = 20,
+                    )
+                }.onSuccess { result ->
+                    generatedImagePath = result.filePath
+                    imageModelStatus =
+                        "Готово офлайн: " + File(result.filePath).name
+                    val directReply =
+                        "Готово. Изображение создано: " + result.filePath
+                    val assistantMessage = Message("assistant", directReply)
+                    messages += assistantMessage
+                    memory.append(assistantMessage)
+                    status = "Изображение готово"
+                    onReply(directReply)
+                }.onFailure { error ->
+                    val directReply =
+                        "Не удалось создать изображение: " +
+                            (error.message ?: error::class.java.simpleName)
+                    val assistantMessage = Message("assistant", directReply)
+                    messages += assistantMessage
+                    memory.append(assistantMessage)
+                    imageModelStatus = directReply
+                    status = "Ошибка генерации"
+                    onReply(directReply)
+                }
+
+                busy = false
+            }
+            return
+        }
+
         if (selectedTaskId == "autopilot") {
             ownerActions.tryExecuteSequence(clean)?.let { directReply ->
                 val assistantMessage = Message("assistant", directReply)
@@ -1243,6 +1332,8 @@ class AssistantViewModel(
             val mode = settings.taskMode(taskId)
             selectedTaskMode = mode
 
+            var webSearchError = ""
+
             val webResults = if (
                 mode != ConnectionMode.OFFLINE &&
                 shouldSearchWeb(clean, taskId)
@@ -1250,6 +1341,9 @@ class AssistantViewModel(
                 status = "Ищу в интернете…"
                 runCatching {
                     webSearch.search(clean)
+                }.onFailure { error ->
+                    webSearchError =
+                        error.message ?: error::class.java.simpleName
                 }.getOrDefault(emptyList())
             } else {
                 emptyList()
@@ -1364,6 +1458,14 @@ class AssistantViewModel(
                             askLocal()
                         }
 
+                        taskId == "web" -> {
+                            if (webSearchError.isNotBlank()) {
+                                "Интернет-поиск не сработал: $webSearchError"
+                            } else {
+                                "По запросу ничего не найдено. Попробуй написать его чуть точнее."
+                            }
+                        }
+
                         else -> {
                             offlineAssistant.reply(
                                 clean,
@@ -1458,6 +1560,13 @@ class AssistantViewModel(
                     } else if (webResults.isNotEmpty()) {
                         status = "Авто: интернет-поиск готов"
                         reply = webSearch.renderForUser(webResults)
+                    } else if (taskId == "web") {
+                        status = "Интернет-поиск не дал результата"
+                        reply = if (webSearchError.isNotBlank()) {
+                            "Интернет-поиск не сработал: $webSearchError"
+                        } else {
+                            "По запросу ничего не найдено. Попробуй написать его чуть точнее."
+                        }
                     } else {
                         usedOffline = true
                         status = "Авто: базовый локальный режим"
@@ -1489,6 +1598,45 @@ class AssistantViewModel(
             }
             onReply(finalReply)
         }
+    }
+
+    private fun isImageGenerationRequest(text: String): Boolean {
+        val lower = text.lowercase().trim()
+        val prefixes = listOf(
+            "создай изображение",
+            "сгенерируй изображение",
+            "сделай изображение",
+            "создай картинку",
+            "сгенерируй картинку",
+            "нарисуй",
+            "создай фото",
+            "сгенерируй фото",
+        )
+        return prefixes.any { lower.startsWith(it) }
+    }
+
+    private fun extractImagePrompt(text: String): String {
+        val clean = text.trim()
+        val lower = clean.lowercase()
+        val prefixes = listOf(
+            "создай изображение",
+            "сгенерируй изображение",
+            "сделай изображение",
+            "создай картинку",
+            "сгенерируй картинку",
+            "нарисуй",
+            "создай фото",
+            "сгенерируй фото",
+        )
+
+        val prefix = prefixes.firstOrNull {
+            lower.startsWith(it)
+        } ?: return ""
+
+        return clean
+            .drop(prefix.length)
+            .trimStart(' ', ':', '-', '—', ',')
+            .trim()
     }
 
     private fun shouldSearchWeb(
