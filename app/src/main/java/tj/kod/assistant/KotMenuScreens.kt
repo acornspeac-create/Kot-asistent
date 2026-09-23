@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+
+@Composable
 fun KotMainMenuScreen(
     viewModel: AssistantViewModel,
     onOpenTask: (String) -> Unit,
