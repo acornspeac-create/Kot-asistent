@@ -73,7 +73,22 @@ jobs:
           end = html.rfind("</script>")
           if start < len("<script>") or end <= start:
               raise SystemExit("Game script block not found")
-          Path("/tmp/kot-game.js").write_text(html[start:end], encoding="utf-8")
+          script = html[start:end]
+          Path("/tmp/kot-game.js").write_text(script, encoding="utf-8")
+
+          import re
+          from collections import Counter
+          ids = re.findall(r'\bid="([^"]+)"', html[:start])
+          dupes = sorted(k for k,v in Counter(ids).items() if v > 1)
+          if dupes:
+              raise SystemExit("Duplicate HTML ids: " + ", ".join(dupes))
+
+          html_ids = set(ids)
+          refs = set(re.findall(r'\$\("#([A-Za-z0-9_-]+)"\)', script))
+          missing = sorted(refs - html_ids)
+          if missing:
+              raise SystemExit("JavaScript references missing ids: " + ", ".join(missing))
+          print(f"UI integrity OK: {len(html_ids)} ids, {len(refs)} direct JS refs")
           PY
           node --check /tmp/kot-game.js
 
@@ -83,14 +98,14 @@ jobs:
       - name: Prepare build files
         shell: bash
         run: |
-          cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.3.apk
-          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.3-test.aab
+          cp simple-game/app/build/outputs/apk/debug/app-debug.apk simple-game/KOT-Catch-v2.4.apk
+          cp simple-game/app/build/outputs/bundle/debug/app-debug.aab simple-game/KOT-Catch-v2.4-test.aab
 
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: kot-catch-v2-3-build
+          name: kot-catch-v2-4-build
           path: |
-            simple-game/KOT-Catch-v2.3.apk
-            simple-game/KOT-Catch-v2.3-test.aab
+            simple-game/KOT-Catch-v2.4.apk
+            simple-game/KOT-Catch-v2.4-test.aab
           retention-days: 7
