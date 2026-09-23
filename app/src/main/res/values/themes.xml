@@ -1,8 +1,11 @@
 <resources>
-    <style name="Theme.KotAssistant" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.KotAssistant" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:navigationBarColor">#05080D</item>
+        <item name="android:statusBarColor">#05080D</item>
+        <item name="android:windowBackground">#05080D</item>
+        <item name="android:colorAccent">#35F39A</item>
     </style>
 </resources>
