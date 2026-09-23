@@ -12,6 +12,11 @@ const badForEach = [...code.matchAll(/(?<!\$)\$\("([^"]+)"\)\.forEach/g)].map(m 
 if (badForEach.length) {
   throw new Error("Single-element $() used with forEach: " + badForEach.join(", "));
 }
+const badCollections = [...code.matchAll(/const\s+([A-Za-z_$][\w$]*)=\$\("([^"]+)"\);[^\n]{0,180}?\1\.(length|slice|map|filter|forEach)/g)]
+  .map(m => m[2] + " -> " + m[3]);
+if (badCollections.length) {
+  throw new Error("Single-element $() used as a collection: " + badCollections.join(", "));
+}
 
 const listeners = new Map();
 const elements = new Map();
@@ -58,7 +63,7 @@ function el(key) {
 
 const document = {
   documentElement: { lang: "ru" },
-  querySelector: selector => el(selector),
+  querySelector: selector => selector === "#arena .spark" ? null : el(selector),
   querySelectorAll: () => [],
   createElement: tag => el("created:" + tag + ":" + elements.size)
 };
