@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>С нуля: 30 дней</title>
+<style>
+:root{
+  --bg:#0f1115;--panel:#171a20;--card:#1d2128;--card2:#222730;--line:#2c323c;
+  --text:#f6f7f9;--muted:#9aa3af;--accent:#e1a847;--good:#7fd3a7;--bad:#ef8585
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+body{overflow:auto}
+.app{min-height:100%;padding:max(12px,env(safe-area-inset-top)) 12px max(16px,env(safe-area-inset-bottom))}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.name{font-size:24px;font-weight:900;letter-spacing:-.5px}.sub{font-size:12px;color:var(--muted);margin-top:3px}
+.day{font-size:22px;font-weight:900;text-align:right}.day small{display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 6px;text-align:center}
+.lab{font-size:9px;color:var(--muted);letter-spacing:.55px;text-transform:uppercase}.val{font-size:18px;font-weight:900;margin-top:2px}
+.event,.result{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:11px 12px;margin-bottom:10px;font-size:13px;line-height:1.35}
+.event b,.result b{display:block;margin-bottom:2px}
+.deals{display:grid;gap:8px;margin-bottom:10px}
+.deal{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px}
+.deal h3{font-size:15px;margin:0 0 5px}.deal p{font-size:12px;color:var(--muted);line-height:1.35;margin:0 0 9px;padding-right:68px}
+.meta{display:flex;gap:6px;flex-wrap:wrap}.pill{font-size:10px;padding:5px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line)}
+.go{position:absolute;right:10px;bottom:10px;min-height:40px;padding:0 12px;border:1px solid #8c6626;border-radius:12px;background:linear-gradient(180deg,#f0bc61,#d79a35);color:#16120c;font-weight:900}
+.go:disabled{opacity:.35}
+.section{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:11px;margin-bottom:10px}
+.sectionTitle{font-size:13px;font-weight:900;margin-bottom:8px}
+.upgrades{display:grid;grid-template-columns:1fr;gap:7px}
+.upgrade{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--text);text-align:left;padding:9px 10px}
+.upgrade b{display:block;font-size:12px;margin-bottom:3px}.upgrade span{font-size:11px;color:var(--muted)}
+.upgrade:disabled{opacity:.55}
+.footer{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.btn{min-height:48px;border-radius:15px;border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:900}
+.btn.primary{background:linear-gradient(180deg,#f0bc61,#d79a35);border-color:#8c6626;color:#16120c}
+.overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(11,13,16,.91);backdrop-filter:blur(10px)}
+.modal{width:min(360px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px;text-align:center}
+.big{font-size:25px;font-weight:950;margin-bottom:8px}.desc{font-size:13px;line-height:1.45;color:var(--muted);margin-bottom:16px}
+.hidden{display:none!important}
+.good{color:var(--good)}.bad{color:var(--bad)}
+@media(min-width:600px){.upgrades{grid-template-columns:repeat(3,1fr)}.app{max-width:720px;margin:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div><div class="name">С нуля: 30 дней</div><div class="sub">бизнес • риск • решения</div></div>
+    <div class="day"><span id="day">1</span>/30<small>день</small></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="lab">Деньги</div><div id="cash" class="val">5 000</div></div>
+    <div class="stat"><div class="lab">Доход/день</div><div id="income" class="val">0</div></div>
+    <div class="stat"><div class="lab">Репутация</div><div id="rep" class="val">50</div></div>
+  </div>
+
+  <div id="event" class="event"><b>Рынок спокоен</b>Сегодня без сильных изменений.</div>
+  <div id="deals" class="deals"></div>
+  <div id="result" class="result">Выбери одну сделку на сегодня.</div>
+
+  <div class="section">
+    <div class="sectionTitle">Развитие бизнеса</div>
+    <div class="upgrades">
+      <button id="uAssistant" class="upgrade" type="button"><b>Помощник · 1 500</b><span>+12% к прибыли со сделок</span></button>
+      <button id="uOffice" class="upgrade" type="button"><b>Офис · 3 000</b><span>+180 дохода каждый день</span></button>
+      <button id="uNetwork" class="upgrade" type="button"><b>Связи · 4 500</b><span>меньше шанс неудачной сделки</span></button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button id="skip" class="btn" type="button">Пропустить день</button>
+    <button id="restart" class="btn" type="button">Начать заново</button>
+  </div>
+</div>
+
+<div id="startOverlay" class="overlay">
+  <div class="modal">
+    <div class="big">У тебя 30 дней и 5 000</div>
+    <div class="desc">Каждый день появляются новые возможности: торговля, услуги, техника, логистика и партнёрства. Можно рисковать ради большой прибыли или расти осторожно.</div>
+    <button id="startBtn" class="btn primary" type="button">Начать бизнес</button>
+  </div>
+</div>
+
+<div id="endOverlay" class="overlay hidden">
+  <div class="modal">
+    <div id="endTitle" class="big">30 дней закончились</div>
+    <div id="endText" class="desc"></div>
+    <button id="again" class="btn primary" type="button">Сыграть ещё раз</button>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let day=1,cash=5000,income=0,rep=50;
+let assistant=false,office=false,network=false,played=false;
+
+const opportunities=[
+ {n:'Оптовая партия товара',d:'Купить небольшой остаток со склада и перепродать местным магазинам.',cost:[900,1800],profit:[450,1600],risk:.18},
+ {n:'Срочная доставка',d:'Взять заказ на перевозку. При хорошем выполнении растёт репутация.',cost:[250,650],profit:[500,1200],risk:.10,rep:4},
+ {n:'Подержанное оборудование',d:'Выкупить технику ниже рынка, привести в порядок и продать.',cost:[1200,2600],profit:[700,2500],risk:.25},
+ {n:'Мелкий ремонт',d:'Нанять мастеров и взять небольшой коммерческий заказ.',cost:[600,1400],profit:[600,1700],risk:.14,rep:3},
+ {n:'Партнёрская точка',d:'Вложиться в маленькую торговую точку. Результат зависит от спроса.',cost:[1800,3300],profit:[900,3100],risk:.28},
+ {n:'Онлайн-заказ',d:'Быстрый заказ с низкими расходами, но небольшой маржой.',cost:[150,500],profit:[250,850],risk:.07,rep:2},
+ {n:'Складской остаток',d:'Рискованная закупка: можно хорошо заработать, а можно зависнуть с товаром.',cost:[1600,3600],profit:[1000,4200],risk:.34}
+];
+
+const events=[
+ ['Спрос вырос','Сегодня прибыль со сделок выше обычного.',1.22,0],
+ ['Тихий рынок','Сильных изменений нет.',1,0],
+ ['Рост расходов','Все сделки сегодня немного дороже.',1,-.12],
+ ['Хорошие рекомендации','Репутация помогает закрывать сделки.',1.08,0],
+ ['Слабый спрос','Доходы сегодня ниже среднего.',.82,0]
+];
+
+let currentEvent=events[1],today=[];
+function rnd(a,b){return Math.floor(a+Math.random()*(b-a+1))}
+function fmt(n){return Math.round(n).toLocaleString('ru-RU')}
+function makeDeal(base){
+  let cost=rnd(base.cost[0],base.cost[1]);
+  if(currentEvent[3])cost=Math.round(cost*(1-currentEvent[3]));
+  return {...base,cost};
+}
+
+function refresh(){
+  $('day').textContent=day;
+  $('cash').textContent=fmt(cash);
+  $('income').textContent=fmt(income);
+  $('rep').textContent=rep;
+  $('event').innerHTML='<b>'+currentEvent[0]+'</b>'+currentEvent[1];
+
+  $('uAssistant').disabled=assistant;
+  $('uOffice').disabled=office;
+  $('uNetwork').disabled=network;
+
+  if(assistant)$('uAssistant').innerHTML='<b>Помощник · куплено</b><span>+12% к прибыли активно</span>';
+  if(office)$('uOffice').innerHTML='<b>Офис · куплено</b><span>+180 каждый день активно</span>';
+  if(network)$('uNetwork').innerHTML='<b>Связи · куплено</b><span>риск сделок снижен</span>';
+}
+
+function renderDeals(){
+  const box=$('deals');box.innerHTML='';
+  today.forEach(d=>{
+    const el=document.createElement('div');el.className='deal';
+    const risk=Math.round(d.risk*100);
+    el.innerHTML='<h3>'+d.n+'</h3><p>'+d.d+'</p><div class="meta"><span class="pill">Вход: '+fmt(d.cost)+'</span><span class="pill">Риск: '+risk+'%</span></div><button class="go" type="button">Взять</button>';
+    const b=el.querySelector('.go');
+    b.disabled=cash<d.cost;
+    b.addEventListener('click',()=>doDeal(d));
+    box.appendChild(el);
+  });
+}
+
+function generateDay(){
+  if(day>30){endGame();return;}
+  cash+=income;
+  currentEvent=events[Math.floor(Math.random()*events.length)];
+  today=[];
+  const copy=[...opportunities];
+  while(today.length<3){
+    const i=Math.floor(Math.random()*copy.length);
+    today.push(makeDeal(copy.splice(i,1)[0]));
+  }
+  played=false;
+  renderDeals();
+  refresh();
+  $('result').textContent=income>0?'Пассивный доход зачислен. Выбери одну сделку.':'Выбери одну сделку на сегодня.';
+}
+
+function doDeal(d){
+  if(played||cash<d.cost)return;
+  played=true;
+  cash-=d.cost;
+  let risk=d.risk-(network?.08:0)-(rep>70?.04:0);
+  risk=Math.max(.03,risk);
+  const success=Math.random()>risk;
+
+  if(success){
+    let gain=rnd(d.profit[0],d.profit[1]);
+    gain=Math.round(gain*currentEvent[2]*(assistant?1.12:1));
+    cash+=d.cost+gain;
+    rep=Math.min(100,rep+(d.rep||1));
+    $('result').innerHTML='<b class="good">Сделка закрыта.</b> Чистая прибыль: +'+fmt(gain)+'.';
+  }else{
+    const back=Math.round(d.cost*rnd(20,60)/100);
+    cash+=back;
+    rep=Math.max(0,rep-2);
+    $('result').innerHTML='<b class="bad">Неудача.</b> Вернулось '+fmt(back)+' из '+fmt(d.cost)+'.';
+  }
+  day++;
+  refresh();
+  setTimeout(generateDay,300);
+}
+
+function skip(){
+  if(played)return;
+  played=true;
+  $('result').textContent='День пропущен. Риск не взят.';
+  day++;
+  setTimeout(generateDay,260);
+}
+
+function buy(type,cost){
+  if(cash<cost){
+    $('result').textContent='Недостаточно денег для улучшения.';
+    return;
+  }
+  cash-=cost;
+  if(type==='assistant')assistant=true;
+  if(type==='office'){office=true;income+=180;}
+  if(type==='network')network=true;
+  refresh();
+  $('result').textContent='Улучшение куплено. Оно работает до конца партии.';
+  renderDeals();
+}
+
+function endGame(){
+  const net=cash+income*5;
+  let title='Месяц завершён';
+  if(net>=40000)title='Бизнес набрал обороты';
+  else if(net>=20000)title='Хороший месяц';
+  else if(net<7000)title='Месяц оказался тяжёлым';
+  $('endTitle').textContent=title;
+  $('endText').innerHTML='Капитал: <b>'+fmt(cash)+'</b><br>Ежедневный доход: <b>'+fmt(income)+'</b><br>Репутация: <b>'+rep+'</b><br><br>Итоговый капитал: <b>'+fmt(net)+'</b>';
+  $('endOverlay').classList.remove('hidden');
+}
+
+function reset(){
+  day=1;cash=5000;income=0;rep=50;
+  assistant=office=network=played=false;
+  $('uAssistant').innerHTML='<b>Помощник · 1 500</b><span>+12% к прибыли со сделок</span>';
+  $('uOffice').innerHTML='<b>Офис · 3 000</b><span>+180 дохода каждый день</span>';
+  $('uNetwork').innerHTML='<b>Связи · 4 500</b><span>меньше шанс неудачной сделки</span>';
+  $('endOverlay').classList.add('hidden');
+  generateDay();
+}
+
+$('startBtn').addEventListener('click',()=>{$('startOverlay').classList.add('hidden');generateDay();});
+$('skip').addEventListener('click',skip);
+$('restart').addEventListener('click',reset);
+$('again').addEventListener('click',reset);
+$('uAssistant').addEventListener('click',()=>buy('assistant',1500));
+$('uOffice').addEventListener('click',()=>buy('office',3000));
+$('uNetwork').addEventListener('click',()=>buy('network',4500));
+refresh();
+})();
+</script>
+</body>
+</html>
