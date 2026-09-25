@@ -1,4 +1,4 @@
-name: Build RONIN APK
+name: Build RONIN v2 APK
 
 on:
   push:
@@ -13,15 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+
       - name: Android SDK
         shell: bash
         run: |
@@ -29,6 +32,21 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; fi
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Stable signing cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ronin-night-city-v2-signing-v1
+
+      - name: Ensure signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=RONIN Night City v2,O=RONIN,C=TJ" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
       - name: Validate JavaScript
         shell: bash
         run: |
@@ -38,16 +56,19 @@ jobs:
           s=h.rfind("<script>")+8
           e=h.rfind("</script>")
           if s < 8 or e <= s: raise SystemExit("script not found")
-          Path("/tmp/ronin.js").write_text(h[s:e],encoding="utf-8")
+          Path("/tmp/ronin-v2.js").write_text(h[s:e],encoding="utf-8")
           PY
-          node --check /tmp/ronin.js
+          node --check /tmp/ronin-v2.js
+
       - name: Build APK
         run: gradle -p ronin-game :app:assembleDebug --no-daemon
+
       - name: Prepare APK
-        run: cp ronin-game/app/build/outputs/apk/debug/app-debug.apk ronin-game/RONIN-Night-City-v1.0.apk
+        run: cp ronin-game/app/build/outputs/apk/debug/app-debug.apk ronin-game/RONIN-Night-City-v2-FIXED.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ronin-night-city-v1-0-apk
-          path: ronin-game/RONIN-Night-City-v1.0.apk
+          name: ronin-night-city-v2-fixed-apk
+          path: ronin-game/RONIN-Night-City-v2-FIXED.apk
           retention-days: 7

@@ -3,11 +3,11 @@ android {
     namespace 'com.sam.roninnightcity'
     compileSdk 36
     defaultConfig {
-        applicationId "com.sam.roninnightcity"
+        applicationId "com.sam.roninnightcity.v2"
         minSdk 23
         targetSdk 36
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0"
     }
     buildTypes {
         debug { debuggable false }
