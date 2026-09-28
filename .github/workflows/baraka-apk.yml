@@ -1,0 +1,70 @@
+name: Build BARAKA APK
+
+on:
+  push:
+    branches: [ baraka-apk-build ]
+    paths:
+      - 'baraka-android/**'
+      - '.github/workflows/baraka-apk.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: baraka-apk-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Android SDK packages
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Restore BARAKA signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: baraka-development-signing-v1
+
+      - name: Ensure stable BARAKA signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair               -keystore "$HOME/.android/debug.keystore"               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=BARAKA Development,O=BARAKA,C=TJ"               -keyalg RSA               -keysize 2048               -validity 10000
+          fi
+
+      - name: Build APK
+        run: gradle -p baraka-android :app:assembleDebug --no-daemon
+
+      - name: Prepare APK
+        shell: bash
+        run: cp baraka-android/app/build/outputs/apk/debug/app-debug.apk baraka-android/BARAKA-v1.0.0.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BARAKA-APK
+          path: baraka-android/BARAKA-v1.0.0.apk
+          retention-days: 7
